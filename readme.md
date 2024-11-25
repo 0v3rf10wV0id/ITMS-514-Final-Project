@@ -1,3 +1,6 @@
+## Note : 
+You can open a workspace in gitpod, to easily manage the code : `gitpod.io/github.com/0v3rf10wV0id/ITMS-514-Final-Project`
+
 # Project Deliverables
 
 1. **Project report** - to be submitted here -
