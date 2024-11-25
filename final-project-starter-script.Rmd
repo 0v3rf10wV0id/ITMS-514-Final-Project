@@ -1,0 +1,203 @@
+---
+title: "Final project starter script"
+author: ''
+date: ''
+output: html_document
+---
+
+#### Package loading
+
+```{r}
+library(tidyverse)
+library(knitr)
+```
+
+
+#### Importing the data
+
+```{r}
+# Import starting data
+nlsy <- read_csv("nlsy97.csv")
+```
+
+#### Variables present in the base data set
+
+To learn more about the data, you can have a look at the variable codebook file available on Canvas.
+
+
+Here's how to rename all the variables to the Question Name abbreviation.  **You will want to change the names to be even more descriptive**, but this is a start.
+
+```{r}
+# Change column names to question name abbreviations (you will want to change these further)
+colnames(nlsy) <- c("PSTRAN_GPA.01_PSTR",
+    "INCARC_TOTNUM_XRND",
+    "INCARC_AGE_FIRST_XRND",
+    "INCARC_LENGTH_LONGEST_XRND",
+    "PUBID_1997",
+    "YSCH-36400_1997",
+    "YSCH-37000_1997",
+    "YSAQ-010_1997",
+    "YSAQ-369_1997",
+    "YEXP-300_1997",
+    "YEXP-1500_1997",
+    "YEXP-1600_1997",
+    "YEXP-1800_1997",
+    "YEXP-2000_1997",
+    "sex",
+    "KEY_BDATE_M_1997",
+    "KEY_BDATE_Y_1997",
+    "PC8-090_1997",
+    "PC8-092_1997",
+    "PC9-002_1997",
+    "PC12-024_1997",
+    "PC12-028_1997",
+    "CV_AGE_12/31/96_1997",
+    "CV_BIO_MOM_AGE_CHILD1_1997",
+    "CV_BIO_MOM_AGE_YOUTH_1997",
+    "CV_CITIZENSHIP_1997",
+    "CV_ENROLLSTAT_1997",
+    "CV_HH_NET_WORTH_P_1997",
+    "CV_YTH_REL_HH_CURRENT_1997",
+    "CV_MSA_AGE_12_1997",
+    "CV_URBAN-RURAL_AGE_12_1997",
+    "CV_SAMPLE_TYPE_1997",
+    "CV_HGC_BIO_DAD_1997",
+    "CV_HGC_BIO_MOM_1997",
+    "CV_HGC_RES_DAD_1997",
+    "CV_HGC_RES_MOM_1997",
+    "race",
+    "YSCH-6800_1998",
+    "YSCH-7300_1998",
+    "YSAQ-372B_1998",
+    "YSAQ-371_2000",
+    "YSAQ-282J_2002",
+    "YSAQ-282Q_2002",
+    "CV_HH_NET_WORTH_Y_2003",
+    "CV_BA_CREDITS.01_2004",
+    "YSAQ-000B_2004",
+    "YSAQ-373_2004",
+    "YSAQ-369_2005",
+    "CV_BIO_CHILD_HH_2007",
+    "YTEL-52~000001_2007",
+    "YTEL-52~000002_2007",
+    "YTEL-52~000003_2007",
+    "YTEL-52~000004_2007",
+    "CV_BIO_CHILD_HH_2009",
+    "CV_COLLEGE_TYPE.01_2011",
+    "CV_INCOME_FAMILY_2011",
+    "CV_HH_SIZE_2011",
+    "CV_HH_UNDER_18_2011",
+    "CV_HH_UNDER_6_2011",
+    "CV_HIGHEST_DEGREE_1112_2011",
+    "CV_BIO_CHILD_HH_2011",
+    "YSCH-3112_2011",
+    "YSAQ-000A000001_2011",
+    "YSAQ-000A000002_2011",
+    "YSAQ-000B_2011",
+    "YSAQ-360C_2011",
+    "YSAQ-364D_2011",
+    "YSAQ-371_2011",
+    "YSAQ-372CC_2011",
+    "YSAQ-373_2011",
+    "YSAQ-374_2011",
+    "YEMP_INDCODE-2002.01_2011",
+    "CV_BIO_CHILD_HH_2015",
+    "YEMP_INDCODE-2002.01_2017",
+    "YEMP_OCCODE-2002.01_2017",
+    "CV_MARSTAT_COLLAPSED_2017",
+    "YINC-1400_2017",
+    "income",
+    "YINC-1800_2017",
+    "YINC-2400_2017",
+    "YINC-2600_2017",
+    "YINC-2700_2017",
+    "CVC_YTH_REL_HH_AGE6_YCHR_XRND",
+    "CVC_SAT_MATH_SCORE_2007_XRND",
+    "CVC_SAT_VERBAL_SCORE_2007_XRND",
+    "CVC_ACT_SCORE_2007_XRND",
+    "CVC_HH_NET_WORTH_20_XRND",
+    "CVC_HH_NET_WORTH_25_XRND",
+    "CVC_ASSETS_FINANCIAL_25_XRND",
+    "CVC_ASSETS_DEBTS_20_XRND",
+    "CVC_HH_NET_WORTH_30_XRND",
+    "CVC_HOUSE_VALUE_30_XRND",
+    "CVC_HOUSE_TYPE_30_XRND",
+    "CVC_ASSETS_FINANCIAL_30_XRND",
+    "CVC_ASSETS_DEBTS_30_XRND")
+
+### Set all negative values to NA.  
+### THIS IS DONE ONLY FOR ILLUSTRATIVE PURPOSES
+### DO NOT TAKE THIS APPROACH WITHOUT CAREFUL JUSTIFICATION
+nlsy[nlsy < 0]  <- NA
+```
+
+#### A note on missing values
+
+Here's an example of what the variable description files look like
+
+```
+T76400.00    [YSAQ-372CC]                                   Survey Year: 2011
+  PRIMARY VARIABLE
+
+ 
+             HAS R USED COCAINE/HARD DRUGS SINCE DLI?
+ 
+Excluding marijuana and alcohol, since the date of last interview, have you used
+any drugs like cocaine, crack, heroin, or crystal meth, or any other substance 
+not prescribed by a doctor, in order to get high or to achieve an altered state?
+ 
+UNIVERSE: All except prisoners in an insecure environment
+ 
+     215       1 YES   (Go To T76401.00)
+    7023       0 NO
+  -------
+    7238
+ 
+Refusal(-1)           74
+Don't Know(-2)        26
+TOTAL =========>    7338   VALID SKIP(-4)      85     NON-INTERVIEW(-5)    1561
+ 
+Min:              0        Max:              1        Mean:                 .03
+ 
+Lead In: T76397.00[Default] T76399.00[Default]  T76398.00[0:0]
+Default Next Question: T76403.00
+```
+
+This description says that the numbers -1, -2, -4 and -5 all have a special meaning for this variable.  They denote different types of missingness.  You can recode all of these to `NA`, but you should also think about whether the different missigness indicators are in some way informative.  (i.e., if someone refuses to answer questions related to drug use, might this inform us about their income?) 
+
+#### Getting to know our two main variables.
+
+In the previous chunk of code we have appropriately renamed the variables corresponding to `sex`, `race` and `income` (as reported on the 2017 survey).  Let's have a quick look at what we're working with.
+
+```{r}
+table(nlsy$sex)
+
+table(nlsy$race)
+```
+
+The data codebook tells us that the coding for sex is `Male = 1`, `Female = 2`.  For the race/ethnicity variable, the coding is:
+
+```
+1 Black
+2 Hispanic
+3 Mixed Race (Non-Hispanic)
+4 Non-Black / Non-Hispanic
+```
+
+You'll want to do some data manipulations to change away from the numeric codings to more interpretable labels. 
+
+```{r}
+summary(nlsy$income)
+
+# Histogram
+qplot(nlsy$income)
+```
+
+The income distributing is right-skewed like one might expect.  However, as indicated in the question description, the income variable is *topcoded* at the 2% level.  More precisely,
+
+```{r}
+n.topcoded <- with(nlsy, sum(income == max(income, na.rm = TRUE), na.rm = TRUE))
+n.topcoded
+```
+
+`r n.topcoded` of the incomes are topcoded to the maximum value of `r max(nlsy$income, na.rm = TRUE)`, which is the average value of the top `r n.topcoded` earners.    You will want to think about how  to deal with this in your analysis.
