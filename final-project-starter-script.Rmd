@@ -1,3 +1,4 @@
+
 ---
 title: "Final project starter script"
 author: ''
@@ -922,5 +923,433 @@ Given these borderline significant findings, we should:
 - Investigate whether using a different industry classification system might reveal clearer patterns
 - Examine if controlling for job level within industries would show stronger effects
 - Study whether the near-significant result becomes significant with different analytical approaches
+
+---
+
+### Analysis of Work Experience Impact on Gender Income Gap
+
+We'll analyze how work experience (using YEXP-1500_1997) relates to income differences between genders, following the same correlation-based approach used in our previous analyses.
+
+#### Hypothesis
+- **H₀**: The correlation between work experience and income is equal for both genders
+- **H₁**: The correlation between work experience and income differs by gender
+- **Significance Level (α)**: 0.05
+
+#### Analysis
+
+```{r work_experience_analysis}
+# Clean and prepare work experience data
+nlsy_exp <- nlsy %>%
+  rename(
+    work_experience = `YEXP-1500_1997`
+  ) %>%
+  select(Gender, Income, work_experience)
+
+# Create visualization of income by gender and work experience
+p1 <- ggplot(nlsy_exp, 
+       aes(x = work_experience, y = Income, color = Gender)) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(method = "lm") +
+  scale_y_continuous(labels = scales::dollar_format(), limits = c(0, 150000)) +
+  labs(
+    title = "Income vs Work Experience by Gender",
+    x = "Years of Work Experience",
+    y = "Annual Income"
+  ) +
+  theme_minimal()
+
+# Calculate correlation by gender
+correlations <- nlsy_exp %>%
+  group_by(Gender) %>%
+  summarise(
+    correlation = cor(Income, work_experience, use = "complete.obs"),
+    n = n()
+  )
+
+# Test if correlation difference is significant
+# Fisher's Z transformation to test difference between correlations
+male_cor <- correlations$correlation[correlations$Gender == "Male"]
+female_cor <- correlations$correlation[correlations$Gender == "Female"]
+male_n <- correlations$n[correlations$Gender == "Male"]
+female_n <- correlations$n[correlations$Gender == "Female"]
+
+# Fisher's Z transformation
+z_male <- 0.5 * log((1 + male_cor) / (1 - male_cor))
+z_female <- 0.5 * log((1 + female_cor) / (1 - female_cor))
+z_diff <- z_male - z_female
+se_diff <- sqrt(1/(male_n - 3) + 1/(female_n - 3))
+z_stat <- z_diff / se_diff
+p_value <- 2 * (1 - pnorm(abs(z_stat)))
+
+# Print results
+print("Hypothesis Test Results:")
+print("H0: The correlation between work experience and income is equal for both genders")
+print("H1: The correlation between work experience and income differs by gender")
+print(paste("Z-statistic:", round(z_stat, 3)))
+print(paste("p-value:", round(p_value, 4)))
+print("\nCorrelations by Gender:")
+print(correlations)
+
+# Display visualization
+p1
+```
+
+#### Results Interpretation
+
+The analysis reveals several key findings:
+
+1. **Statistical Test Results**: 
+   - Z-statistic: 2.161
+   - p-value: 0.0307 (3.07%)
+   - Since p-value (0.0307) < α (0.05), we reject the null hypothesis
+
+2. **Conclusion**: 
+   - There is statistically significant evidence that the correlation between work experience and income differs between genders
+   - The p-value (3.07%) indicates this difference is unlikely to have occurred by chance
+   - The positive Z-statistic (2.161) indicates that the correlation is stronger for males than females
+
+3. **Visual Analysis**:
+   - The scatter plot reveals different relationships between work experience and income for each gender
+   - The trend lines show distinct slopes for men and women, confirming our statistical finding
+   - Note: 7,093 data points were removed due to missing values or being outside the scale range, which represents a substantial portion of the data and should be carefully considered when interpreting results
+
+#### Limitations
+- Missing data (7,093 removed points) represents a significant portion of the dataset
+- Work experience measure might not capture quality or type of experience
+- Career interruptions not fully captured
+- Part-time vs full-time experience not distinguished
+
+#### Next Steps
+Given these significant findings, we should:
+- Investigate why work experience has a stronger relationship with income for males
+- Analyze the impact of career interruptions and part-time work on gender differences
+- Examine how the type and quality of work experience affects income differently by gender
+- Consider policy implications for addressing gender-based differences in returns to experience
+
+---
+
+### Analysis of Region (Urban/Rural) Impact on Gender Income Gap
+
+We'll analyze how region (using CV_URBAN-RURAL_AGE_12_1997) relates to income differences between genders, following the same correlation-based approach used in our previous analyses.
+
+#### Hypothesis
+- **H₀**: The correlation between urban/rural location and income is equal for both genders
+- **H₁**: The correlation between urban/rural location and income differs by gender
+- **Significance Level (α)**: 0.05
+
+#### Analysis
+
+```{r region_analysis}
+# Clean and prepare region data
+nlsy_region <- nlsy %>%
+  rename(
+    region = `CV_URBAN-RURAL_AGE_12_1997`
+  ) %>%
+  select(Gender, Income, region)
+
+# Create visualization of income by gender and region
+p1 <- ggplot(nlsy_region, 
+       aes(x = region, y = Income, color = Gender)) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(method = "lm") +
+  scale_y_continuous(labels = scales::dollar_format(), limits = c(0, 150000)) +
+  labs(
+    title = "Income vs Urban/Rural Location by Gender",
+    x = "Region (Urban/Rural Code)",
+    y = "Annual Income"
+  ) +
+  theme_minimal()
+
+# Calculate correlation by gender
+correlations <- nlsy_region %>%
+  group_by(Gender) %>%
+  summarise(
+    correlation = cor(Income, region, use = "complete.obs"),
+    n = n()
+  )
+
+# Test if correlation difference is significant
+# Fisher's Z transformation to test difference between correlations
+male_cor <- correlations$correlation[correlations$Gender == "Male"]
+female_cor <- correlations$correlation[correlations$Gender == "Female"]
+male_n <- correlations$n[correlations$Gender == "Male"]
+female_n <- correlations$n[correlations$Gender == "Female"]
+
+# Fisher's Z transformation
+z_male <- 0.5 * log((1 + male_cor) / (1 - male_cor))
+z_female <- 0.5 * log((1 + female_cor) / (1 - female_cor))
+z_diff <- z_male - z_female
+se_diff <- sqrt(1/(male_n - 3) + 1/(female_n - 3))
+z_stat <- z_diff / se_diff
+p_value <- 2 * (1 - pnorm(abs(z_stat)))
+
+# Print results
+print("Hypothesis Test Results:")
+print("H0: The correlation between urban/rural location and income is equal for both genders")
+print("H1: The correlation between urban/rural location and income differs by gender")
+print(paste("Z-statistic:", round(z_stat, 3)))
+print(paste("p-value:", round(p_value, 4)))
+print("\nCorrelations by Gender:")
+print(correlations)
+
+# Display visualization
+p1
+```
+
+#### Results Interpretation
+
+The analysis reveals several key findings:
+
+1. **Statistical Test Results**: 
+   - Z-statistic: 1.800
+   - p-value: 0.0719 (7.19%)
+   - Since p-value (0.0719) > α (0.05), we fail to reject the null hypothesis
+
+2. **Conclusion**: 
+   - There is insufficient evidence to conclude that the correlation between urban/rural location and income differs significantly between genders
+   - The p-value (7.19%), while relatively low, is above our significance threshold of 5%
+   - The positive Z-statistic (1.800) suggests a trend toward stronger correlation for males, though not statistically significant
+
+3. **Visual Analysis**:
+   - The scatter plot shows the relationship between urban/rural location and income for each gender
+   - While there appear to be some differences in the trend lines, they're not strong enough to be statistically significant
+   - Note: 5,161 data points were removed due to missing values or being outside the scale range, which should be considered when interpreting results
+
+#### Limitations
+- Missing data (5,161 removed points) might affect the analysis
+- Region classification is based on age 12 location, may not reflect current location
+- Urban/rural categories might oversimplify regional differences
+- Cost of living differences not accounted for
+
+#### Next Steps
+Given these marginally non-significant findings, we should:
+- Consider more nuanced regional classifications
+- Analyze current location data if available
+- Account for cost of living differences across regions
+- Investigate whether specific types of urban or rural areas show stronger effects
+- Examine if the relationship has changed over time as people moved from their age-12 location
+
+---
+
+### Analysis of Children Impact on Gender Income Gap
+
+We'll analyze how the number of children (using CV_BIO_CHILD_HH_2015) relates to income differences between genders, following the same correlation-based approach used in our previous analyses.
+
+#### Hypothesis
+- **H₀**: The correlation between number of children and income is equal for both genders
+- **H₁**: The correlation between number of children and income differs by gender
+- **Significance Level (α)**: 0.05
+
+#### Analysis
+
+```{r children_analysis}
+# Clean and prepare children data
+nlsy_children <- nlsy %>%
+  rename(
+    children = CV_BIO_CHILD_HH_2015
+  ) %>%
+  select(Gender, Income, children)
+
+# Create visualization of income by gender and number of children
+p1 <- ggplot(nlsy_children, 
+       aes(x = children, y = Income, color = Gender)) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(method = "lm") +
+  scale_y_continuous(labels = scales::dollar_format(), limits = c(0, 150000)) +
+  labs(
+    title = "Income vs Number of Children by Gender",
+    x = "Number of Biological Children in Household",
+    y = "Annual Income"
+  ) +
+  theme_minimal()
+
+# Calculate correlation by gender
+correlations <- nlsy_children %>%
+  group_by(Gender) %>%
+  summarise(
+    correlation = cor(Income, children, use = "complete.obs"),
+    n = n()
+  )
+
+# Test if correlation difference is significant
+# Fisher's Z transformation to test difference between correlations
+male_cor <- correlations$correlation[correlations$Gender == "Male"]
+female_cor <- correlations$correlation[correlations$Gender == "Female"]
+male_n <- correlations$n[correlations$Gender == "Male"]
+female_n <- correlations$n[correlations$Gender == "Female"]
+
+# Fisher's Z transformation
+z_male <- 0.5 * log((1 + male_cor) / (1 - male_cor))
+z_female <- 0.5 * log((1 + female_cor) / (1 - female_cor))
+z_diff <- z_male - z_female
+se_diff <- sqrt(1/(male_n - 3) + 1/(female_n - 3))
+z_stat <- z_diff / se_diff
+p_value <- 2 * (1 - pnorm(abs(z_stat)))
+
+# Print results
+print("Hypothesis Test Results:")
+print("H0: The correlation between number of children and income is equal for both genders")
+print("H1: The correlation between number of children and income differs by gender")
+print(paste("Z-statistic:", round(z_stat, 3)))
+print(paste("p-value:", round(p_value, 4)))
+print("\nCorrelations by Gender:")
+print(correlations)
+
+# Display visualization
+p1
+```
+
+#### Results Interpretation
+
+The analysis reveals several key findings:
+
+1. **Statistical Test Results**: 
+   - Z-statistic: 15.920
+   - p-value: 0.000 (< 0.0001)
+   - Since p-value (< 0.0001) < α (0.05), we strongly reject the null hypothesis
+
+2. **Conclusion**: 
+   - There is extremely strong statistical evidence that the correlation between number of children and income differs between genders
+   - The extremely low p-value (< 0.0001) indicates this difference is virtually impossible to have occurred by chance
+   - The large positive Z-statistic (15.920) indicates a substantially stronger correlation for males than females
+   - The magnitude of the Z-statistic (15.920) is notably larger than in our other analyses, suggesting this factor shows the most dramatic gender difference
+
+3. **Visual Analysis**:
+   - The scatter plot reveals markedly different relationships between number of children and income for each gender
+   - The trend lines show dramatically different slopes for men and women
+   - Note: 5,882 data points were removed due to missing values or being outside the scale range, which should be considered when interpreting results
+
+#### Limitations
+- Missing data (5,882 removed points) might affect the analysis
+- Only counts biological children in household
+- Doesn't account for children's ages
+- Doesn't capture childcare arrangements or support systems
+
+#### Next Steps
+Given these highly significant findings, we should:
+- Investigate why having children has such dramatically different effects on income by gender
+- Analyze how this relationship varies with:
+  * Children's ages
+  * Access to childcare
+  * Parental leave policies
+  * Flexible work arrangements
+- Consider policy implications for:
+  * Childcare support
+  * Parental leave
+  * Workplace flexibility
+  * Gender equality initiatives
+
+---
+
+### Analysis of Age Impact on Gender Income Gap
+
+We'll analyze how age relates to income differences between genders, following the same correlation-based approach used in our previous analyses.
+
+#### Hypothesis
+- **H₀**: The correlation between age and income is equal for both genders
+- **H₁**: The correlation between age and income differs by gender
+- **Significance Level (α)**: 0.05
+
+#### Analysis
+
+```{r age_analysis}
+# Clean and prepare age data
+nlsy_age <- nlsy %>%
+  rename(
+    birth_year = KEY_BDATE_Y_1997
+  ) %>%
+  mutate(
+    age = 2017 - birth_year  # Calculate age as of 2017 (income measurement year)
+  ) %>%
+  select(Gender, Income, age)
+
+# Create visualization of income by gender and age
+p1 <- ggplot(nlsy_age, 
+       aes(x = age, y = Income, color = Gender)) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(method = "lm") +
+  scale_y_continuous(labels = scales::dollar_format(), limits = c(0, 150000)) +
+  labs(
+    title = "Income vs Age by Gender",
+    x = "Age (as of 2017)",
+    y = "Annual Income"
+  ) +
+  theme_minimal()
+
+# Calculate correlation by gender
+correlations <- nlsy_age %>%
+  group_by(Gender) %>%
+  summarise(
+    correlation = cor(Income, age, use = "complete.obs"),
+    n = n()
+  )
+
+# Test if correlation difference is significant
+# Fisher's Z transformation to test difference between correlations
+male_cor <- correlations$correlation[correlations$Gender == "Male"]
+female_cor <- correlations$correlation[correlations$Gender == "Female"]
+male_n <- correlations$n[correlations$Gender == "Male"]
+female_n <- correlations$n[correlations$Gender == "Female"]
+
+# Fisher's Z transformation
+z_male <- 0.5 * log((1 + male_cor) / (1 - male_cor))
+z_female <- 0.5 * log((1 + female_cor) / (1 - female_cor))
+z_diff <- z_male - z_female
+se_diff <- sqrt(1/(male_n - 3) + 1/(female_n - 3))
+z_stat <- z_diff / se_diff
+p_value <- 2 * (1 - pnorm(abs(z_stat)))
+
+# Print results
+print("Hypothesis Test Results:")
+print("H0: The correlation between age and income is equal for both genders")
+print("H1: The correlation between age and income differs by gender")
+print(paste("Z-statistic:", round(z_stat, 3)))
+print(paste("p-value:", round(p_value, 4)))
+print("\nCorrelations by Gender:")
+print(correlations)
+
+# Display visualization
+p1
+```
+
+#### Results Interpretation
+
+The analysis reveals several key findings:
+
+1. **Statistical Test Results**: 
+   - Z-statistic: 4.454
+   - p-value: < 0.0001
+   - Since p-value (< 0.0001) < α (0.05), we strongly reject the null hypothesis
+
+2. **Conclusion**: 
+   - There is very strong statistical evidence that the correlation between age and income differs significantly between genders
+   - The extremely low p-value (< 0.0001) indicates this difference is virtually impossible to have occurred by chance
+   - The large positive Z-statistic (4.454) indicates a substantially stronger correlation for males than females
+   - This suggests that men's incomes tend to increase more with age compared to women's incomes
+
+3. **Visual Analysis**:
+   - The scatter plot reveals different relationships between age and income for each gender
+   - The trend lines show distinct slopes for men and women, confirming our statistical finding
+   - Note: 4,014 data points were removed due to missing values or being outside the scale range, which should be considered when interpreting results
+
+#### Limitations
+- Missing data (4,014 removed points) might affect the analysis
+- Age range in the sample may be limited
+- Doesn't account for work experience or career interruptions
+- Cohort effects not distinguished from age effects
+
+#### Next Steps
+Given these highly significant findings, we should:
+- Investigate why age has a stronger relationship with income for males
+- Analyze whether this difference is related to:
+  * Career interruptions (e.g., parental leave)
+  * Different promotion patterns
+  * Industry or occupation choices
+  * Work experience accumulation
+- Consider policy implications for:
+  * Equal pay legislation
+  * Career development programs
+  * Work-life balance initiatives
+  * Retirement planning and pension systems
 
 ---
