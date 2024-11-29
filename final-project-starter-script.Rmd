@@ -2,9 +2,7 @@
 title: "Final project starter script"
 author: ''
 date: ''
-output:
-  pdf_document: default
-  html_document: default
+output: html_document
 ---
 
 #### Package loading
@@ -14,7 +12,7 @@ library(tidyverse)
 library(knitr)
 library(ggplot2)
 library(dplyr)
-library(effsize)
+library(gridExtra)
 ```
 
 
@@ -311,532 +309,618 @@ print(paste0("Women earn ", round(pay_gap$gap_percent, 1),
 
 ```
 
-### Factors Affecting Difference of Income between Men and Women
+### Analysis of Parents' Education Impact on Gender Income Gap
 
-Factors that we are testing:
- - Parents education 
- - Drug Use 
- - Education
- - Martial status
- - Criminal history
- - Profession
- - Work Experience
- - Region (Urban/Rural)
- - Children
- - Age
- - Ethnicity
- - Health Status
+The first factor we'll analyze is parents' education and its relationship with income differences between genders. We'll test whether the correlation between parental education and income differs significantly between men and women.
 
-###########################################################################################
-```{r}
-# Rename and clean relevant variables
-nlsy <- nlsy %>%
+#### Hypothesis
+- **H₀**: The correlation between parental education and income is equal for both genders
+- **H₁**: The correlation between parental education and income differs by gender
+- **Significance Level (α)**: 0.05
+
+#### Analysis
+
+```{r parents_education_analysis}
+# Clean and prepare parents' education data
+nlsy_parents_ed <- nlsy %>%
   rename(
-    Education_Level = CV_HIGHEST_DEGREE_1112_2011,
-    Marital_Status = CV_MARSTAT_COLLAPSED_2017,
-    Criminal_Record = INCARC_TOTNUM_XRND,
-    Drug_Use = `YSAQ-372B_1998`,
-    Parent_Education_Dad = CV_HGC_BIO_DAD_1997,
-    Parent_Education_Mom = CV_HGC_BIO_MOM_1997,
-    Urban_Rural = `CV_URBAN-RURAL_AGE_12_1997`,
-    Children_HH = CV_BIO_CHILD_HH_2015,
-    Ethnicity = race,
-    Work_Experience = `YEXP-1800_1997`
-  )
-
-# Recode categorical variables
-nlsy <- nlsy %>%
+    father_education = CV_HGC_BIO_DAD_1997,
+    mother_education = CV_HGC_BIO_MOM_1997
+  ) %>%
   mutate(
-    Education_Level = factor(Education_Level,
-      levels = 0:5,
-      labels = c("No Degree", "GED", "High School", "Associate", "Bachelor", "Master/PhD")
-    ),
-    Marital_Status = factor(Marital_Status,
-      levels = 1:4,
-      labels = c("Never Married", "Married", "Separated/Divorced", "Widowed")
-    ),
-    Ethnicity = factor(Ethnicity,
-      levels = 1:4,
-      labels = c("Black", "Hispanic", "Mixed Race", "White/Other")
-    ),
-    Urban_Rural = factor(Urban_Rural,
-      levels = 0:1,
-      labels = c("Rural", "Urban")
-    ),
-    Has_Criminal_Record = factor(ifelse(Criminal_Record > 0, "Yes", "No")),
-    Has_Children = factor(ifelse(Children_HH > 0, "Yes", "No"))
-  )
+    # Calculate average parental education
+    parents_avg_education = (father_education + mother_education) / 2
+  ) %>%
+  select(Gender, Income, father_education, mother_education, parents_avg_education)
 
-# 1. Education Analysis
-# ---------------------
-education_analysis <- nlsy %>%
-  group_by(Gender, Education_Level) %>%
-  summarise(
-    Mean_Income = mean(Income, na.rm = TRUE),
-    Median_Income = median(Income, na.rm = TRUE),
-    Count = n(),
-    .groups = 'drop'
-  )
-
-# Create two complementary visualizations for education
-p1_education <- ggplot(nlsy, aes(x = Education_Level, y = Income, fill = Gender)) +
-  geom_boxplot() +
+# Create visualization of income by gender and parental education
+p1 <- ggplot(nlsy_parents_ed, 
+       aes(x = parents_avg_education, y = Income, color = Gender)) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(method = "lm") +
   scale_y_continuous(labels = scales::dollar_format(), limits = c(0, 150000)) +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   labs(
-    title = "Income Distribution by Education Level and Gender",
-    subtitle = "Box plots show quartiles and outliers",
-    x = "Education Level",
-    y = "Income"
-  )
+    title = "Income vs Parents' Average Education by Gender",
+    x = "Parents' Average Years of Education",
+    y = "Annual Income"
+  ) +
+  theme_minimal()
 
-p2_education <- ggplot(education_analysis, 
-                      aes(x = Education_Level, y = Mean_Income, fill = Gender)) +
-  geom_bar(stat = "identity", position = "dodge") +
-  geom_text(aes(label = scales::dollar(Mean_Income, accuracy = 1)), 
-            position = position_dodge(width = 0.9),
-            vjust = -0.5, size = 3) +
-  scale_y_continuous(labels = scales::dollar_format()) +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  labs(
-    title = "Average Income by Education Level and Gender",
-    subtitle = "Bar heights represent mean income",
-    x = "Education Level",
-    y = "Mean Income"
-  )
-
-grid.arrange(p1_education, p2_education, ncol = 1)
-
-# Print education summary
-print("Education Level Analysis:")
-print(education_analysis)
-
-# 2. Marital Status Analysis
-# --------------------------
-marital_analysis <- nlsy %>%
-  group_by(Gender, Marital_Status) %>%
-  summarise(
-    Mean_Income = mean(Income, na.rm = TRUE),
-    Median_Income = median(Income, na.rm = TRUE),
-    Count = n(),
-    .groups = 'drop'
-  )
-
-p1_marital <- ggplot(nlsy, aes(x = Marital_Status, y = Income, fill = Gender)) +
-  geom_violin(alpha = 0.5) +
-  geom_boxplot(width = 0.2, alpha = 0.8) +
-  scale_y_continuous(labels = scales::dollar_format(), limits = c(0, 150000)) +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  labs(
-    title = "Income Distribution by Marital Status and Gender",
-    subtitle = "Violin plots show distribution shape, box plots show quartiles",
-    x = "Marital Status",
-    y = "Income"
-  )
-
-p2_marital <- ggplot(marital_analysis, 
-                     aes(x = Marital_Status, y = Mean_Income, fill = Gender)) +
-  geom_bar(stat = "identity", position = "dodge") +
-  geom_text(aes(label = scales::dollar(Mean_Income, accuracy = 1)), 
-            position = position_dodge(width = 0.9),
-            vjust = -0.5, size = 3) +
-  scale_y_continuous(labels = scales::dollar_format()) +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  labs(
-    title = "Average Income by Marital Status and Gender",
-    subtitle = "Bar heights represent mean income",
-    x = "Marital Status",
-    y = "Mean Income"
-  )
-
-grid.arrange(p1_marital, p2_marital, ncol = 1)
-
-# Print marital status summary
-print("Marital Status Analysis:")
-print(marital_analysis)
-
-# 3. Children Impact Analysis
-# --------------------------
-children_analysis <- nlsy %>%
-  group_by(Gender, Has_Children) %>%
-  summarise(
-    Mean_Income = mean(Income, na.rm = TRUE),
-    Median_Income = median(Income, na.rm = TRUE),
-    Count = n(),
-    .groups = 'drop'
-  )
-
-p1_children <- ggplot(nlsy, aes(x = Has_Children, y = Income, fill = Gender)) +
-  geom_violin(alpha = 0.5) +
-  geom_boxplot(width = 0.2, alpha = 0.8) +
-  scale_y_continuous(labels = scales::dollar_format(), limits = c(0, 150000)) +
-  theme_minimal() +
-  labs(
-    title = "Income Distribution by Parental Status and Gender",
-    subtitle = "Violin plots show distribution shape, box plots show quartiles",
-    x = "Has Children",
-    y = "Income"
-  )
-
-p2_children <- ggplot(children_analysis, 
-                      aes(x = Has_Children, y = Mean_Income, fill = Gender)) +
-  geom_bar(stat = "identity", position = "dodge") +
-  geom_text(aes(label = scales::dollar(Mean_Income, accuracy = 1)), 
-            position = position_dodge(width = 0.9),
-            vjust = -0.5, size = 3) +
-  scale_y_continuous(labels = scales::dollar_format()) +
-  theme_minimal() +
-  labs(
-    title = "Average Income by Parental Status and Gender",
-    subtitle = "Bar heights represent mean income",
-    x = "Has Children",
-    y = "Mean Income"
-  )
-
-grid.arrange(p1_children, p2_children, ncol = 1)
-
-# Print children impact summary
-print("Children Impact Analysis:")
-print(children_analysis)
-
-# 4. Urban/Rural Analysis
-# -----------------------
-location_analysis <- nlsy %>%
-  group_by(Gender, Urban_Rural) %>%
-  summarise(
-    Mean_Income = mean(Income, na.rm = TRUE),
-    Median_Income = median(Income, na.rm = TRUE),
-    Count = n(),
-    .groups = 'drop'
-  )
-
-p1_location <- ggplot(nlsy, aes(x = Urban_Rural, y = Income, fill = Gender)) +
-  geom_violin(alpha = 0.5) +
-  geom_boxplot(width = 0.2, alpha = 0.8) +
-  scale_y_continuous(labels = scales::dollar_format(), limits = c(0, 150000)) +
-  theme_minimal() +
-  labs(
-    title = "Income Distribution by Location and Gender",
-    subtitle = "Violin plots show distribution shape, box plots show quartiles",
-    x = "Location Type",
-    y = "Income"
-  )
-
-p2_location <- ggplot(location_analysis, 
-                      aes(x = Urban_Rural, y = Mean_Income, fill = Gender)) +
-  geom_bar(stat = "identity", position = "dodge") +
-  geom_text(aes(label = scales::dollar(Mean_Income, accuracy = 1)), 
-            position = position_dodge(width = 0.9),
-            vjust = -0.5, size = 3) +
-  scale_y_continuous(labels = scales::dollar_format()) +
-  theme_minimal() +
-  labs(
-    title = "Average Income by Location and Gender",
-    subtitle = "Bar heights represent mean income",
-    x = "Location Type",
-    y = "Mean Income"
-  )
-
-grid.arrange(p1_location, p2_location, ncol = 1)
-
-# Print location analysis summary
-print("Urban/Rural Analysis:")
-print(location_analysis)
-
-# 5. Criminal Record Analysis
-# --------------------------
-criminal_analysis <- nlsy %>%
-  group_by(Gender, Has_Criminal_Record) %>%
-  summarise(
-    Mean_Income = mean(Income, na.rm = TRUE),
-    Median_Income = median(Income, na.rm = TRUE),
-    Count = n(),
-    .groups = 'drop'
-  )
-
-p1_criminal <- ggplot(nlsy, aes(x = Has_Criminal_Record, y = Income, fill = Gender)) +
-  geom_violin(alpha = 0.5) +
-  geom_boxplot(width = 0.2, alpha = 0.8) +
-  scale_y_continuous(labels = scales::dollar_format(), limits = c(0, 150000)) +
-  theme_minimal() +
-  labs(
-    title = "Income Distribution by Criminal Record and Gender",
-    subtitle = "Violin plots show distribution shape, box plots show quartiles",
-    x = "Has Criminal Record",
-    y = "Income"
-  )
-
-p2_criminal <- ggplot(criminal_analysis, 
-                      aes(x = Has_Criminal_Record, y = Mean_Income, fill = Gender)) +
-  geom_bar(stat = "identity", position = "dodge") +
-  geom_text(aes(label = scales::dollar(Mean_Income, accuracy = 1)), 
-            position = position_dodge(width = 0.9),
-            vjust = -0.5, size = 3) +
-  scale_y_continuous(labels = scales::dollar_format()) +
-  theme_minimal() +
-  labs(
-    title = "Average Income by Criminal Record and Gender",
-    subtitle = "Bar heights represent mean income",
-    x = "Has Criminal Record",
-    y = "Mean Income"
-  )
-
-grid.arrange(p1_criminal, p2_criminal, ncol = 1)
-
-# Print criminal record analysis summary
-print("Criminal Record Analysis:")
-print(criminal_analysis)
-
-# Statistical Analysis
-# 1. Multiple Linear Regression
-model <- lm(Income ~ Gender * (Education_Level + Marital_Status + 
-                              Has_Children + Urban_Rural + Has_Criminal_Record),
-           data = nlsy)
-
-# Print model summary
-print("Multiple Linear Regression Results:")
-print(summary(model))
-
-# Calculate adjusted income gaps for each factor
-factors_summary <- nlsy %>%
+# Calculate correlation by gender
+correlations <- nlsy_parents_ed %>%
   group_by(Gender) %>%
   summarise(
-    Education_High = mean(Income[Education_Level %in% c("Bachelor", "Master/PhD")], na.rm = TRUE),
-    Education_Low = mean(Income[Education_Level %in% c("No Degree", "GED")], na.rm = TRUE),
-    Married = mean(Income[Marital_Status == "Married"], na.rm = TRUE),
-    Not_Married = mean(Income[Marital_Status != "Married"], na.rm = TRUE),
-    With_Children = mean(Income[Has_Children == "Yes"], na.rm = TRUE),
-    Without_Children = mean(Income[Has_Children == "No"], na.rm = TRUE),
-    Urban = mean(Income[Urban_Rural == "Urban"], na.rm = TRUE),
-    Rural = mean(Income[Urban_Rural == "Rural"], na.rm = TRUE)
+    correlation = cor(Income, parents_avg_education, use = "complete.obs"),
+    n = n()
   )
 
-# Print summary statistics
-print("Summary of Income Gaps by Factor:")
-print(factors_summary)
+# Test if correlation difference is significant
+# Fisher's Z transformation to test difference between correlations
+male_cor <- correlations$correlation[correlations$Gender == "Male"]
+female_cor <- correlations$correlation[correlations$Gender == "Female"]
+male_n <- correlations$n[correlations$Gender == "Male"]
+female_n <- correlations$n[correlations$Gender == "Female"]
 
-# Calculate and print key findings
-key_findings <- list(
-  education_premium = (factors_summary$Education_High - factors_summary$Education_Low) / 
-                     factors_summary$Education_Low * 100,
-  marriage_premium = (factors_summary$Married - factors_summary$Not_Married) / 
-                    factors_summary$Not_Married * 100,
-  children_impact = (factors_summary$With_Children - factors_summary$Without_Children) / 
-                   factors_summary$Without_Children * 100,
-  urban_premium = (factors_summary$Urban - factors_summary$Rural) / 
-                 factors_summary$Rural * 100
-)
+# Fisher's Z transformation
+z_male <- 0.5 * log((1 + male_cor) / (1 - male_cor))
+z_female <- 0.5 * log((1 + female_cor) / (1 - female_cor))
+z_diff <- z_male - z_female
+se_diff <- sqrt(1/(male_n - 3) + 1/(female_n - 3))
+z_stat <- z_diff / se_diff
+p_value <- 2 * (1 - pnorm(abs(z_stat)))
 
-print("\nKey Findings (Percentage Differences):")
-print(key_findings)
+# Print results
+print("Hypothesis Test Results:")
+print("H0: The correlation between parental education and income is equal for both genders")
+print("H1: The correlation between parental education and income differs by gender")
+print(paste("Z-statistic:", round(z_stat, 3)))
+print(paste("p-value:", round(p_value, 4)))
+print("\nCorrelations by Gender:")
+print(correlations)
 
+# Display visualization
+p1
 ```
 
-```{r}
-# Create correlation matrix for factors affecting income
-# First, let's calculate the gender income gap by various factors
-income_gaps <- nlsy %>%
-  group_by(
-    Education_Level,
-    Marital_Status,
-    Has_Children,
-    Urban_Rural,
-    Has_Criminal_Record,
-    Ethnicity
+#### Results Interpretation
+
+The analysis reveals several key findings:
+
+1. **Statistical Test Results**: 
+   - Z-statistic: -3.612
+   - p-value: 0.0003 (0.03%)
+   - Since p-value (0.0003) < α (0.05), we reject the null hypothesis
+
+2. **Conclusion**: 
+   - There is strong statistical evidence that the correlation between parental education and income differs significantly between genders
+   - The negative Z-statistic (-3.612) suggests that the correlation is stronger for females than males
+   - This difference is highly significant, with only a 0.03% chance of observing such a difference if no true difference existed
+
+3. **Visual Analysis**:
+   - The scatter plot reveals a positive relationship between parents' education and income for both genders
+   - The trend lines show different slopes for men and women, confirming our statistical findings
+   - There appears to be more variance in income at higher education levels
+   - Note: 5,044 data points were removed due to missing values or being outside the scale range, which should be considered when interpreting results
+
+#### Limitations
+- Missing data (5,044 removed points) might affect the analysis
+- The relationship might not be purely linear
+- Other confounding variables might influence this relationship
+
+#### Next Steps
+Based on these significant findings, we should:
+- Investigate why the relationship differs between genders
+- Consider controlling for additional variables
+- Examine if this pattern holds across different age groups or time periods
+- Explore policy implications for addressing gender-based income disparities
+
+---
+
+
+### Analysis of Drug Use Impact on Gender Income Gap
+
+We'll analyze how drug use (from variable YSAQ-372CC_2011) relates to income differences between genders, following the same correlation-based approach used in the parents' education analysis.
+
+#### Hypothesis
+- **H₀**: The correlation between drug use and income is equal for both genders
+- **H₁**: The correlation between drug use and income differs by gender
+- **Significance Level (α)**: 0.05
+
+#### Analysis
+
+```{r drug_use_analysis}
+# Clean and prepare drug use data
+nlsy_drug <- nlsy %>%
+  rename(
+    drug_use = `YSAQ-372CC_2011`
   ) %>%
-  summarise(
-    Male_Income = mean(Income[Gender == "Male"], na.rm = TRUE),
-    Female_Income = mean(Income[Gender == "Female"], na.rm = TRUE),
-    Income_Gap = Male_Income - Female_Income,
-    Gap_Percentage = (Income_Gap / Male_Income) * 100,
-    .groups = 'drop'
-  )
+  select(Gender, Income, drug_use)
 
-# Create numeric variables for correlation analysis
-nlsy_numeric <- nlsy %>%
-  mutate(
-    Income_Gap = ifelse(Gender == "Male", 
-                       Income - mean(Income[Gender == "Female"], na.rm = TRUE),
-                       Income - mean(Income[Gender == "Male"], na.rm = TRUE)),
-    Education_Num = as.numeric(Education_Level),
-    Marital_Num = as.numeric(Marital_Status),
-    Children_Num = as.numeric(Children_HH),
-    Urban_Num = as.numeric(Urban_Rural),
-    Criminal_Num = as.numeric(Has_Criminal_Record),
-    Parent_Education = (Parent_Education_Dad + Parent_Education_Mom) / 2
-  )
-
-# Create correlation matrix
-cor_vars <- nlsy_numeric %>%
-  select(Income_Gap, Education_Num, Marital_Num, Children_Num, 
-         Urban_Num, Criminal_Num, Parent_Education)
-
-correlation_matrix <- cor(cor_vars, use = "complete.obs")
-
-# Create correlation plot
-library(corrplot)
-corrplot(correlation_matrix, 
-         method = "color", 
-         type = "upper", 
-         order = "hclust",
-         addCoef.col = "black",
-         tl.col = "black",
-         tl.srt = 45,
-         title = "Correlation Matrix of Factors Affecting Income Gap",
-         mar = c(0,0,2,0))
-
-# Calculate key statistics for each factor
-factor_analysis <- nlsy_numeric %>%
-  summarise(
-    Education_Correlation = cor(Income_Gap, Education_Num, use = "complete.obs"),
-    Marital_Correlation = cor(Income_Gap, Marital_Num, use = "complete.obs"),
-    Children_Correlation = cor(Income_Gap, Children_Num, use = "complete.obs"),
-    Urban_Correlation = cor(Income_Gap, Urban_Num, use = "complete.obs"),
-    Criminal_Correlation = cor(Income_Gap, Criminal_Num, use = "complete.obs"),
-    Parent_Ed_Correlation = cor(Income_Gap, Parent_Education, use = "complete.obs")
-  )
-
-# Print analysis results
-print("Correlation Analysis Results:")
-print(factor_analysis)
-
-# Create summary visualization of correlations
-factor_analysis_long <- factor_analysis %>%
-  gather(key = "Factor", value = "Correlation") %>%
-  mutate(
-    Factor = gsub("_Correlation", "", Factor),
-    Abs_Correlation = abs(Correlation)
-  )
-
-ggplot(factor_analysis_long, aes(x = reorder(Factor, Abs_Correlation), y = Correlation)) +
-  geom_bar(stat = "identity", fill = "steelblue") +
-  coord_flip() +
-  theme_minimal() +
+# Create visualization of income by gender and drug use
+p1 <- ggplot(nlsy_drug, 
+       aes(x = drug_use, y = Income, color = Gender)) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(method = "lm") +
+  scale_y_continuous(labels = scales::dollar_format(), limits = c(0, 150000)) +
   labs(
-    title = "Correlation of Factors with Income Gap",
-    subtitle = "Absolute correlation values",
-    x = "Factor",
-    y = "Correlation Coefficient"
+    title = "Income vs Drug Use by Gender",
+    x = "Drug Use (0 = No, 1 = Yes)",
+    y = "Annual Income"
+  ) +
+  theme_minimal()
+
+# Calculate correlation by gender
+correlations <- nlsy_drug %>%
+  group_by(Gender) %>%
+  summarise(
+    correlation = cor(Income, drug_use, use = "complete.obs"),
+    n = n()
   )
+
+# Test if correlation difference is significant
+# Fisher's Z transformation to test difference between correlations
+male_cor <- correlations$correlation[correlations$Gender == "Male"]
+female_cor <- correlations$correlation[correlations$Gender == "Female"]
+male_n <- correlations$n[correlations$Gender == "Male"]
+female_n <- correlations$n[correlations$Gender == "Female"]
+
+# Fisher's Z transformation
+z_male <- 0.5 * log((1 + male_cor) / (1 - male_cor))
+z_female <- 0.5 * log((1 + female_cor) / (1 - female_cor))
+z_diff <- z_male - z_female
+se_diff <- sqrt(1/(male_n - 3) + 1/(female_n - 3))
+z_stat <- z_diff / se_diff
+p_value <- 2 * (1 - pnorm(abs(z_stat)))
+
+# Print results
+print("Hypothesis Test Results:")
+print("H0: The correlation between drug use and income is equal for both genders")
+print("H1: The correlation between drug use and income differs by gender")
+print(paste("Z-statistic:", round(z_stat, 3)))
+print(paste("p-value:", round(p_value, 4)))
+print("\nCorrelations by Gender:")
+print(correlations)
+
+# Display visualization
+p1
 ```
 
+#### Results Interpretation
 
-```{r}
-# Hypothesis Testing using t-tests for Education Levels
-# H0: There is no significant difference in income between males and females within each education level
-# H1: There is a significant difference in income between males and females within each education level
+The analysis reveals several key findings:
 
-# Perform t-tests for each education level
-t_test_results <- nlsy %>%
-  group_by(Education_Level) %>%
-  summarise(
-    n_male = sum(Gender == "Male" & !is.na(Income)),
-    n_female = sum(Gender == "Female" & !is.na(Income)),
-    mean_male = mean(Income[Gender == "Male"], na.rm = TRUE),
-    mean_female = mean(Income[Gender == "Female"], na.rm = TRUE),
-    t_stat = t.test(Income[Gender == "Male"], 
-                    Income[Gender == "Female"])$statistic,
-    p_value = t.test(Income[Gender == "Male"], 
-                     Income[Gender == "Female"])$p.value,
-    mean_diff = mean_male - mean_female,
-    perc_diff = (mean_diff/mean_male) * 100,
-    .groups = 'drop'
+1. **Statistical Test Results**: 
+   - Z-statistic: 0.367
+   - p-value: 0.7134 (71.34%)
+   - Since p-value (0.7134) > α (0.05), we fail to reject the null hypothesis
+
+2. **Conclusion**: 
+   - There is no statistically significant evidence that the correlation between drug use and income differs between genders
+   - The relatively high p-value (71.34%) suggests that any observed differences in correlation between genders are likely due to random chance
+   - The small Z-statistic (0.367) indicates minimal difference in the relationship between drug use and income across genders
+
+3. **Visual Analysis**:
+   - The scatter plot shows the relationship between drug use and income for each gender
+   - The trend lines appear relatively similar for both genders, supporting our statistical finding
+   - Note: 4,341 data points were removed due to missing values or being outside the scale range, which should be considered when interpreting results
+
+#### Limitations
+- Missing data (4,341 removed points) might affect the analysis
+- Binary nature of drug use variable may limit correlation analysis
+- Self-reported drug use may be underreported
+- Other confounding variables not controlled for
+
+#### Next Steps
+Given these findings, we should:
+- Investigate whether the relationship holds when controlling for other variables
+- Consider analyzing drug use patterns more granularly (frequency, type, duration)
+- Examine if this pattern is consistent across different age groups or time periods
+- Explore other factors that might better explain gender-based income differences
+
+### Analysis of Education Impact on Gender Income Gap
+
+We'll analyze how education level (from variable CV_HIGHEST_DEGREE_1112_2011) relates to income differences between genders, following the same correlation-based approach used in our previous analyses.
+
+#### Hypothesis
+- **H₀**: The correlation between education level and income is equal for both genders
+- **H₁**: The correlation between education level and income differs by gender
+- **Significance Level (α)**: 0.05
+
+#### Analysis
+
+```{r education_analysis}
+# Clean and prepare education data
+nlsy_edu <- nlsy %>%
+  rename(
+    education = CV_HIGHEST_DEGREE_1112_2011
   ) %>%
-  mutate(
-    significant = ifelse(p_value < 0.05, "Yes", "No"),
-    mean_male = round(mean_male, 2),
-    mean_female = round(mean_female, 2),
-    t_stat = round(t_stat, 3),
-    p_value = round(p_value, 4),
-    mean_diff = round(mean_diff, 2),
-    perc_diff = round(perc_diff, 1)
-  )
+  select(Gender, Income, education)
 
-# Print results in a formatted way
-cat("\nT-Test Results by Education Level:\n")
-cat("----------------------------------------\n")
-
-for(i in 1:nrow(t_test_results)) {
-  result <- t_test_results[i,]
-  cat(sprintf("\nEducation Level: %s\n", result$Education_Level))
-  cat(sprintf("Sample sizes: Male = %d, Female = %d\n", 
-              result$n_male, result$n_female))
-  cat(sprintf("Mean Income: Male = $%s, Female = $%s\n", 
-              format(result$mean_male, big.mark=","), 
-              format(result$mean_female, big.mark=",")))
-  cat(sprintf("Mean Difference: $%s (%.1f%%)\n", 
-              format(result$mean_diff, big.mark=","), 
-              result$perc_diff))
-  cat(sprintf("t-statistic: %.3f\n", result$t_stat))
-  cat(sprintf("p-value: %.4f\n", result$p_value))
-  cat(sprintf("Statistically Significant: %s\n", result$significant))
-  cat("----------------------------------------\n")
-}
-
-# Create visualization of results
-ggplot(t_test_results, 
-       aes(x = Education_Level, y = mean_diff, fill = significant)) +
-  geom_bar(stat = "identity") +
-  geom_text(aes(label = sprintf("$%s\np=%.4f", 
-                               format(mean_diff, big.mark=","), 
-                               p_value)),
-            vjust = -0.5, size = 3) +
-  scale_fill_manual(values = c("No" = "gray", "Yes" = "steelblue")) +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+# Create visualization of income by gender and education
+p1 <- ggplot(nlsy_edu, 
+       aes(x = education, y = Income, color = Gender)) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(method = "lm") +
+  scale_y_continuous(labels = scales::dollar_format(), limits = c(0, 150000)) +
   labs(
-    title = "Gender Income Gap by Education Level",
-    subtitle = "With statistical significance",
+    title = "Income vs Education Level by Gender",
     x = "Education Level",
-    y = "Income Difference (Male - Female)",
-    fill = "Statistically\nSignificant"
+    y = "Annual Income"
+  ) +
+  theme_minimal()
+
+# Calculate correlation by gender
+correlations <- nlsy_edu %>%
+  group_by(Gender) %>%
+  summarise(
+    correlation = cor(Income, education, use = "complete.obs"),
+    n = n()
   )
 
-# Overall t-test across all education levels
-overall_ttest <- t.test(Income ~ Gender, data = nlsy)
+# Test if correlation difference is significant
+# Fisher's Z transformation to test difference between correlations
+male_cor <- correlations$correlation[correlations$Gender == "Male"]
+female_cor <- correlations$correlation[correlations$Gender == "Female"]
+male_n <- correlations$n[correlations$Gender == "Male"]
+female_n <- correlations$n[correlations$Gender == "Female"]
 
-cat("\nOverall T-Test Results (Across All Education Levels):\n")
-cat("----------------------------------------\n")
-cat(sprintf("t-statistic: %.3f\n", overall_ttest$statistic))
-cat(sprintf("p-value: %.4f\n", overall_ttest$p.value))
-cat(sprintf("95%% Confidence Interval: $%.2f to $%.2f\n", 
-            overall_ttest$conf.int[1], overall_ttest$conf.int[2]))
-cat(sprintf("Mean Difference: $%.2f\n", diff(overall_ttest$estimate)))
+# Fisher's Z transformation
+z_male <- 0.5 * log((1 + male_cor) / (1 - male_cor))
+z_female <- 0.5 * log((1 + female_cor) / (1 - female_cor))
+z_diff <- z_male - z_female
+se_diff <- sqrt(1/(male_n - 3) + 1/(female_n - 3))
+z_stat <- z_diff / se_diff
+p_value <- 2 * (1 - pnorm(abs(z_stat)))
+
+# Print results
+print("Hypothesis Test Results:")
+print("H0: The correlation between education level and income is equal for both genders")
+print("H1: The correlation between education level and income differs by gender")
+print(paste("Z-statistic:", round(z_stat, 3)))
+print(paste("p-value:", round(p_value, 4)))
+print("\nCorrelations by Gender:")
+print(correlations)
+
+# Display visualization
+p1
 ```
 
-# Results Interpretation:
+#### Results Interpretation
 
-1. Overall Gender Income Gap:
-   - The analysis shows a statistically significant overall gender income gap across all education levels
-   - The difference is significant at the p < 0.05 level
-   - This suggests strong evidence to reject the null hypothesis of no gender income difference
+The analysis reveals several key findings:
 
-2. Education-Level Specific Findings:
-   - The gender income gap varies considerably across education levels
-   - Higher education levels generally show larger absolute dollar differences
-   - The gap is statistically significant for most education levels
-   - The percentage difference tends to be smaller at higher education levels
+1. **Statistical Test Results**: 
+   - Z-statistic: -4.303
+   - p-value: 0.000 (< 0.0001)
+   - Since p-value (< 0.0001) < α (0.05), we reject the null hypothesis
 
-3. Key Patterns:
-   - The gender income gap persists across all education levels
-   - Education level appears to moderate the size of the gender income gap
-   - Both absolute and relative gaps show systematic patterns
-   - Statistical significance is strongest at higher education levels
+2. **Conclusion**: 
+   - There is very strong statistical evidence that the correlation between education level and income differs significantly between genders
+   - The highly significant p-value (< 0.0001) suggests this difference is extremely unlikely to have occurred by chance
+   - The negative Z-statistic (-4.303) indicates that the correlation is stronger for females than males
 
-4. Limitations:
-   - The analysis doesn't account for other contributing factors
-   - Sample sizes vary across education levels
-   - The t-test assumes normal distribution of incomes
-   - Multiple testing might inflate Type I error rate
+3. **Visual Analysis**:
+   - The scatter plot reveals a positive relationship between education level and income for both genders
+   - The trend lines show different slopes for men and women, confirming our statistical finding
+   - Note: 4,316 data points were removed due to missing values or being outside the scale range, which should be considered when interpreting results
 
-5. Implications:
-   - Education alone does not eliminate the gender income gap
-   - The relationship between education and the gender income gap is complex
-   - Both absolute and relative measures should be considered
-   - Further investigation of contributing factors is warranted
+#### Limitations
+- Missing data (4,316 removed points) might affect the analysis
+- Education levels are discrete categories, which may affect correlation analysis
+- Other aspects of education (field of study, school quality) not captured
+- Other confounding variables not controlled for
+
+#### Next Steps
+Given these highly significant findings, we should:
+- Investigate why education has a stronger relationship with income for females
+- Analyze specific education levels where gender gaps are most pronounced
+- Consider field of study and its impact on the gender-education-income relationship
+- Explore policy implications for educational equity and gender wage gaps
+
+---
+
+### Analysis of Marital Status Impact on Gender Income Gap
+
+We'll analyze how marital status (from variable CV_MARSTAT_COLLAPSED_2017) relates to income differences between genders, following the same correlation-based approach used in our previous analyses.
+
+#### Hypothesis
+- **H₀**: The correlation between marital status and income is equal for both genders
+- **H₁**: The correlation between marital status and income differs by gender
+- **Significance Level (α)**: 0.05
+
+#### Analysis
+
+```{r marital_status_analysis}
+# Clean and prepare marital status data
+nlsy_marital <- nlsy %>%
+  rename(
+    marital_status = CV_MARSTAT_COLLAPSED_2017
+  ) %>%
+  select(Gender, Income, marital_status)
+
+# Create visualization of income by gender and marital status
+p1 <- ggplot(nlsy_marital, 
+       aes(x = marital_status, y = Income, color = Gender)) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(method = "lm") +
+  scale_y_continuous(labels = scales::dollar_format(), limits = c(0, 150000)) +
+  labs(
+    title = "Income vs Marital Status by Gender",
+    x = "Marital Status",
+    y = "Annual Income"
+  ) +
+  theme_minimal()
+
+# Calculate correlation by gender
+correlations <- nlsy_marital %>%
+  group_by(Gender) %>%
+  summarise(
+    correlation = cor(Income, marital_status, use = "complete.obs"),
+    n = n()
+  )
+
+# Test if correlation difference is significant
+# Fisher's Z transformation to test difference between correlations
+male_cor <- correlations$correlation[correlations$Gender == "Male"]
+female_cor <- correlations$correlation[correlations$Gender == "Female"]
+male_n <- correlations$n[correlations$Gender == "Male"]
+female_n <- correlations$n[correlations$Gender == "Female"]
+
+# Fisher's Z transformation
+z_male <- 0.5 * log((1 + male_cor) / (1 - male_cor))
+z_female <- 0.5 * log((1 + female_cor) / (1 - female_cor))
+z_diff <- z_male - z_female
+se_diff <- sqrt(1/(male_n - 3) + 1/(female_n - 3))
+z_stat <- z_diff / se_diff
+p_value <- 2 * (1 - pnorm(abs(z_stat)))
+
+# Print results
+print("Hypothesis Test Results:")
+print("H0: The correlation between marital status and income is equal for both genders")
+print("H1: The correlation between marital status and income differs by gender")
+print(paste("Z-statistic:", round(z_stat, 3)))
+print(paste("p-value:", round(p_value, 4)))
+print("\nCorrelations by Gender:")
+print(correlations)
+
+# Display visualization
+p1
 ```
 
+#### Results Interpretation
+
+The analysis reveals several key findings:
+
+1. **Statistical Test Results**: 
+   - Z-statistic: 4.392
+   - p-value: 0.000 (< 0.0001)
+   - Since p-value (< 0.0001) < α (0.05), we reject the null hypothesis
+
+2. **Conclusion**: 
+   - There is very strong statistical evidence that the correlation between marital status and income differs significantly between genders
+   - The highly significant p-value (< 0.0001) suggests this difference is extremely unlikely to have occurred by chance
+   - The positive Z-statistic (4.392) indicates that the correlation is stronger for males than females
+
+3. **Visual Analysis**:
+   - The scatter plot reveals different relationships between marital status and income for each gender
+   - The trend lines show distinctly different slopes for men and women, confirming our statistical finding
+   - Note: 4,045 data points were removed due to missing values or being outside the scale range, which should be considered when interpreting results
+
+#### Limitations
+- Missing data (4,045 removed points) might affect the analysis
+- Marital status categories are discrete, which may affect correlation analysis
+- Changes in marital status over time not captured
+- Other confounding variables not controlled for
+
+#### Next Steps
+Given these highly significant findings, we should:
+- Investigate why marital status has a stronger relationship with income for males
+- Analyze how marriage timing affects income differently by gender
+- Consider the role of traditional gender roles and household responsibilities
+- Explore policy implications for work-family balance and gender equality
+
+---
+
+### Analysis of Criminal History Impact on Gender Income Gap
+
+We'll analyze how criminal history (using INCARC_TOTNUM_XRND - total number of incarcerations) relates to income differences between genders, following the same correlation-based approach used in our previous analyses.
+
+#### Hypothesis
+- **H₀**: The correlation between criminal history and income is equal for both genders
+- **H₁**: The correlation between criminal history and income differs by gender
+- **Significance Level (α)**: 0.05
+
+#### Analysis
+
+```{r criminal_history_analysis}
+# Clean and prepare criminal history data
+nlsy_criminal <- nlsy %>%
+  rename(
+    incarcerations = INCARC_TOTNUM_XRND
+  ) %>%
+  select(Gender, Income, incarcerations)
+
+# Create visualization of income by gender and criminal history
+p1 <- ggplot(nlsy_criminal, 
+       aes(x = incarcerations, y = Income, color = Gender)) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(method = "lm") +
+  scale_y_continuous(labels = scales::dollar_format(), limits = c(0, 150000)) +
+  labs(
+    title = "Income vs Number of Incarcerations by Gender",
+    x = "Total Number of Incarcerations",
+    y = "Annual Income"
+  ) +
+  theme_minimal()
+
+# Calculate correlation by gender
+correlations <- nlsy_criminal %>%
+  group_by(Gender) %>%
+  summarise(
+    correlation = cor(Income, incarcerations, use = "complete.obs"),
+    n = n()
+  )
+
+# Test if correlation difference is significant
+# Fisher's Z transformation to test difference between correlations
+male_cor <- correlations$correlation[correlations$Gender == "Male"]
+female_cor <- correlations$correlation[correlations$Gender == "Female"]
+male_n <- correlations$n[correlations$Gender == "Male"]
+female_n <- correlations$n[correlations$Gender == "Female"]
+
+# Fisher's Z transformation
+z_male <- 0.5 * log((1 + male_cor) / (1 - male_cor))
+z_female <- 0.5 * log((1 + female_cor) / (1 - female_cor))
+z_diff <- z_male - z_female
+se_diff <- sqrt(1/(male_n - 3) + 1/(female_n - 3))
+z_stat <- z_diff / se_diff
+p_value <- 2 * (1 - pnorm(abs(z_stat)))
+
+# Print results
+print("Hypothesis Test Results:")
+print("H0: The correlation between criminal history and income is equal for both genders")
+print("H1: The correlation between criminal history and income differs by gender")
+print(paste("Z-statistic:", round(z_stat, 3)))
+print(paste("p-value:", round(p_value, 4)))
+print("\nCorrelations by Gender:")
+print(correlations)
+
+# Display visualization
+p1
+```
+
+#### Results Interpretation
+
+The analysis reveals several key findings:
+
+1. **Statistical Test Results**: 
+   - Z-statistic: -3.015
+   - p-value: 0.0026 (0.26%)
+   - Since p-value (0.0026) < α (0.05), we reject the null hypothesis
+
+2. **Conclusion**: 
+   - There is strong statistical evidence that the correlation between criminal history and income differs significantly between genders
+   - The low p-value (0.26%) suggests this difference is very unlikely to have occurred by chance
+   - The negative Z-statistic (-3.015) indicates that the correlation is stronger for females than males
+
+3. **Visual Analysis**:
+   - The scatter plot reveals different relationships between incarceration history and income for each gender
+   - The trend lines show distinct slopes for men and women, confirming our statistical finding
+   - Note: 4,020 data points were removed due to missing values or being outside the scale range, and an additional 42 rows were removed from the trend line calculation, which should be considered when interpreting results
+
+#### Limitations
+- Missing data (4,020 + 42 removed points) might affect the analysis
+- Incarceration count may not capture full criminal history
+- Length and type of incarceration not considered
+- Temporal relationship between incarceration and income not established
+
+#### Next Steps
+Given these significant findings, we should:
+- Investigate why criminal history has a stronger relationship with income for females
+- Analyze the impact of incarceration length and timing on income by gender
+- Examine interaction with education and employment opportunities
+- Explore policy implications for gender-specific rehabilitation and reintegration programs
+
+---
+
+### Analysis of Profession Impact on Gender Income Gap
+
+We'll analyze how profession/industry (using YEMP_INDCODE-2002.01_2017) relates to income differences between genders, following the same correlation-based approach used in our previous analyses.
+
+#### Hypothesis
+- **H₀**: The correlation between profession/industry and income is equal for both genders
+- **H₁**: The correlation between profession/industry and income differs by gender
+- **Significance Level (α)**: 0.05
+
+#### Analysis
+
+```{r profession_analysis}
+# Clean and prepare profession data
+nlsy_prof <- nlsy %>%
+  rename(
+    profession = `YEMP_INDCODE-2002.01_2017`
+  ) %>%
+  select(Gender, Income, profession)
+
+# Create visualization of income by gender and profession
+p1 <- ggplot(nlsy_prof, 
+       aes(x = profession, y = Income, color = Gender)) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(method = "lm") +
+  scale_y_continuous(labels = scales::dollar_format(), limits = c(0, 150000)) +
+  labs(
+    title = "Income vs Industry Code by Gender",
+    x = "Industry Code",
+    y = "Annual Income"
+  ) +
+  theme_minimal()
+
+# Calculate correlation by gender
+correlations <- nlsy_prof %>%
+  group_by(Gender) %>%
+  summarise(
+    correlation = cor(Income, profession, use = "complete.obs"),
+    n = n()
+  )
+
+# Test if correlation difference is significant
+# Fisher's Z transformation to test difference between correlations
+male_cor <- correlations$correlation[correlations$Gender == "Male"]
+female_cor <- correlations$correlation[correlations$Gender == "Female"]
+male_n <- correlations$n[correlations$Gender == "Male"]
+female_n <- correlations$n[correlations$Gender == "Female"]
+
+# Fisher's Z transformation
+z_male <- 0.5 * log((1 + male_cor) / (1 - male_cor))
+z_female <- 0.5 * log((1 + female_cor) / (1 - female_cor))
+z_diff <- z_male - z_female
+se_diff <- sqrt(1/(male_n - 3) + 1/(female_n - 3))
+z_stat <- z_diff / se_diff
+p_value <- 2 * (1 - pnorm(abs(z_stat)))
+
+# Print results
+print("Hypothesis Test Results:")
+print("H0: The correlation between profession/industry and income is equal for both genders")
+print("H1: The correlation between profession/industry and income differs by gender")
+print(paste("Z-statistic:", round(z_stat, 3)))
+print(paste("p-value:", round(p_value, 4)))
+print("\nCorrelations by Gender:")
+print(correlations)
+
+# Display visualization
+p1
+```
+
+#### Results Interpretation
+
+The analysis reveals several key findings:
+
+1. **Statistical Test Results**: 
+   - Z-statistic: 1.934
+   - p-value: 0.0531 (5.31%)
+   - Since p-value (0.0531) > α (0.05), we fail to reject the null hypothesis, though the result is very close to the significance threshold
+
+2. **Conclusion**: 
+   - There is marginal evidence that the correlation between profession/industry and income differs between genders
+   - The p-value (5.31%) is just slightly above our significance level of 5%
+   - The positive Z-statistic (1.934) suggests a trend toward stronger correlation for males, though not statistically significant at α = 0.05
+
+3. **Visual Analysis**:
+   - The scatter plot shows the relationship between industry codes and income for each gender
+   - The trend lines suggest slight differences between genders, though not strong enough to be statistically significant
+   - Note: 4,173 data points were removed due to missing values or being outside the scale range, which should be considered when interpreting results
+
+#### Limitations
+- Missing data (4,173 removed points) might affect the analysis
+- Industry codes are categorical in nature, which may affect correlation analysis
+- Does not account for position level within industries
+- Career progression paths not captured
+
+#### Next Steps
+Given these borderline significant findings, we should:
+- Consider a more detailed analysis of specific industries
+- Investigate whether using a different industry classification system might reveal clearer patterns
+- Examine if controlling for job level within industries would show stronger effects
+- Study whether the near-significant result becomes significant with different analytical approaches
+
+---
