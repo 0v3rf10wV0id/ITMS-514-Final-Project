@@ -2,7 +2,9 @@
 title: "Final project starter script"
 author: ''
 date: ''
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 #### Package loading
@@ -10,6 +12,9 @@ output: html_document
 ```{r}
 library(tidyverse)
 library(knitr)
+library(ggplot2)
+library(dplyr)
+library(effsize)
 ```
 
 
@@ -201,3 +206,637 @@ n.topcoded
 ```
 
 `r n.topcoded` of the incomes are topcoded to the maximum value of `r max(nlsy$income, na.rm = TRUE)`, which is the average value of the top `r n.topcoded` earners.    You will want to think about how  to deal with this in your analysis.
+
+### Significant Difference in Income between Men and Women
+
+###########################################################################################
+```{r}
+# Rename and clean data
+nlsy <- nlsy %>%
+  rename(
+    Gender = sex,
+    Income = income
+  ) %>%
+  mutate(
+    Gender = factor(Gender, levels = c(1, 2), labels = c("Male", "Female")),
+    Income = ifelse(Income < 0, NA, Income)
+  )
+
+# Create multiple visualizations for better insight
+# 1. Density plot with summary statistics
+p1 <- ggplot(nlsy, aes(x = Income, fill = Gender)) +
+  geom_density(alpha = 0.5) +
+  geom_vline(data = nlsy %>% 
+               group_by(Gender) %>% 
+               summarise(median = median(Income, na.rm = TRUE)),
+             aes(xintercept = median, color = Gender),
+             linetype = "dashed", size = 1) +
+  scale_x_continuous(labels = scales::dollar_format(), limits = c(0, 150000)) +
+  labs(
+    title = "Income Distribution by Gender",
+    subtitle = "Dashed lines represent median income",
+    x = "Annual Income",
+    y = "Density"
+  ) +
+  theme_minimal()
+
+# 2. Box plot with violin plot overlay
+p2 <- ggplot(nlsy, aes(x = Gender, y = Income, fill = Gender)) +
+  geom_violin(alpha = 0.5) +
+  geom_boxplot(width = 0.2, alpha = 0.8) +
+  coord_cartesian(ylim = c(0, 150000)) +
+  scale_y_continuous(labels = scales::dollar_format()) +
+  labs(
+    title = "Income Distribution Details by Gender",
+    subtitle = "Violin plot shows distribution shape, box plot shows quartiles",
+    x = "Gender",
+    y = "Annual Income"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+# 3. Income brackets analysis
+p3 <- nlsy %>%
+  mutate(Income_Bracket = cut(Income, 
+                             breaks = c(0, 25000, 50000, 75000, 100000, Inf),
+                             labels = c("0-25k", "25k-50k", "50k-75k", "75k-100k", "100k+"),
+                             include.lowest = TRUE)) %>%
+  ggplot(aes(x = Income_Bracket, fill = Gender)) +
+  geom_bar(position = "dodge") +
+  scale_y_continuous(labels = scales::comma) +
+  labs(
+    title = "Income Brackets by Gender",
+    subtitle = "Number of individuals in each income range",
+    x = "Income Bracket",
+    y = "Count"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Print summary statistics
+gender_summary <- nlsy %>%
+  group_by(Gender) %>%
+  summarise(
+    Mean = mean(Income, na.rm = TRUE),
+    Median = median(Income, na.rm = TRUE),
+    SD = sd(Income, na.rm = TRUE),
+    Q1 = quantile(Income, 0.25, na.rm = TRUE),
+    Q3 = quantile(Income, 0.75, na.rm = TRUE),
+    n = sum(!is.na(Income))
+  ) %>%
+  mutate(across(Mean:Q3, ~scales::dollar(.x, accuracy = 1)))
+
+print("Income Summary Statistics by Gender:")
+print(gender_summary)
+
+# Arrange plots in a grid
+library(gridExtra)
+grid.arrange(p1, p2, p3, ncol = 2, nrow = 2)
+
+# Statistical test
+t_test_result <- t.test(Income ~ Gender, data = nlsy, var.equal = FALSE)
+print("\nStatistical Test Results:")
+print(t_test_result)
+
+# Calculate and print gender pay gap
+pay_gap <- nlsy %>%
+  group_by(Gender) %>%
+  summarise(mean_income = mean(Income, na.rm = TRUE)) %>%
+  spread(Gender, mean_income) %>%
+  mutate(gap_percent = (Male - Female) / Male * 100)
+
+print("\nGender Pay Gap:")
+print(paste0("Women earn ", round(pay_gap$gap_percent, 1), 
+            "% less than men on average in this sample"))
+
+```
+
+### Factors Affecting Difference of Income between Men and Women
+
+Factors that we are testing:
+ - Parents education 
+ - Drug Use 
+ - Education
+ - Martial status
+ - Criminal history
+ - Profession
+ - Work Experience
+ - Region (Urban/Rural)
+ - Children
+ - Age
+ - Ethnicity
+ - Health Status
+
+###########################################################################################
+```{r}
+# Rename and clean relevant variables
+nlsy <- nlsy %>%
+  rename(
+    Education_Level = CV_HIGHEST_DEGREE_1112_2011,
+    Marital_Status = CV_MARSTAT_COLLAPSED_2017,
+    Criminal_Record = INCARC_TOTNUM_XRND,
+    Drug_Use = `YSAQ-372B_1998`,
+    Parent_Education_Dad = CV_HGC_BIO_DAD_1997,
+    Parent_Education_Mom = CV_HGC_BIO_MOM_1997,
+    Urban_Rural = `CV_URBAN-RURAL_AGE_12_1997`,
+    Children_HH = CV_BIO_CHILD_HH_2015,
+    Ethnicity = race,
+    Work_Experience = `YEXP-1800_1997`
+  )
+
+# Recode categorical variables
+nlsy <- nlsy %>%
+  mutate(
+    Education_Level = factor(Education_Level,
+      levels = 0:5,
+      labels = c("No Degree", "GED", "High School", "Associate", "Bachelor", "Master/PhD")
+    ),
+    Marital_Status = factor(Marital_Status,
+      levels = 1:4,
+      labels = c("Never Married", "Married", "Separated/Divorced", "Widowed")
+    ),
+    Ethnicity = factor(Ethnicity,
+      levels = 1:4,
+      labels = c("Black", "Hispanic", "Mixed Race", "White/Other")
+    ),
+    Urban_Rural = factor(Urban_Rural,
+      levels = 0:1,
+      labels = c("Rural", "Urban")
+    ),
+    Has_Criminal_Record = factor(ifelse(Criminal_Record > 0, "Yes", "No")),
+    Has_Children = factor(ifelse(Children_HH > 0, "Yes", "No"))
+  )
+
+# 1. Education Analysis
+# ---------------------
+education_analysis <- nlsy %>%
+  group_by(Gender, Education_Level) %>%
+  summarise(
+    Mean_Income = mean(Income, na.rm = TRUE),
+    Median_Income = median(Income, na.rm = TRUE),
+    Count = n(),
+    .groups = 'drop'
+  )
+
+# Create two complementary visualizations for education
+p1_education <- ggplot(nlsy, aes(x = Education_Level, y = Income, fill = Gender)) +
+  geom_boxplot() +
+  scale_y_continuous(labels = scales::dollar_format(), limits = c(0, 150000)) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(
+    title = "Income Distribution by Education Level and Gender",
+    subtitle = "Box plots show quartiles and outliers",
+    x = "Education Level",
+    y = "Income"
+  )
+
+p2_education <- ggplot(education_analysis, 
+                      aes(x = Education_Level, y = Mean_Income, fill = Gender)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  geom_text(aes(label = scales::dollar(Mean_Income, accuracy = 1)), 
+            position = position_dodge(width = 0.9),
+            vjust = -0.5, size = 3) +
+  scale_y_continuous(labels = scales::dollar_format()) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(
+    title = "Average Income by Education Level and Gender",
+    subtitle = "Bar heights represent mean income",
+    x = "Education Level",
+    y = "Mean Income"
+  )
+
+grid.arrange(p1_education, p2_education, ncol = 1)
+
+# Print education summary
+print("Education Level Analysis:")
+print(education_analysis)
+
+# 2. Marital Status Analysis
+# --------------------------
+marital_analysis <- nlsy %>%
+  group_by(Gender, Marital_Status) %>%
+  summarise(
+    Mean_Income = mean(Income, na.rm = TRUE),
+    Median_Income = median(Income, na.rm = TRUE),
+    Count = n(),
+    .groups = 'drop'
+  )
+
+p1_marital <- ggplot(nlsy, aes(x = Marital_Status, y = Income, fill = Gender)) +
+  geom_violin(alpha = 0.5) +
+  geom_boxplot(width = 0.2, alpha = 0.8) +
+  scale_y_continuous(labels = scales::dollar_format(), limits = c(0, 150000)) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(
+    title = "Income Distribution by Marital Status and Gender",
+    subtitle = "Violin plots show distribution shape, box plots show quartiles",
+    x = "Marital Status",
+    y = "Income"
+  )
+
+p2_marital <- ggplot(marital_analysis, 
+                     aes(x = Marital_Status, y = Mean_Income, fill = Gender)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  geom_text(aes(label = scales::dollar(Mean_Income, accuracy = 1)), 
+            position = position_dodge(width = 0.9),
+            vjust = -0.5, size = 3) +
+  scale_y_continuous(labels = scales::dollar_format()) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(
+    title = "Average Income by Marital Status and Gender",
+    subtitle = "Bar heights represent mean income",
+    x = "Marital Status",
+    y = "Mean Income"
+  )
+
+grid.arrange(p1_marital, p2_marital, ncol = 1)
+
+# Print marital status summary
+print("Marital Status Analysis:")
+print(marital_analysis)
+
+# 3. Children Impact Analysis
+# --------------------------
+children_analysis <- nlsy %>%
+  group_by(Gender, Has_Children) %>%
+  summarise(
+    Mean_Income = mean(Income, na.rm = TRUE),
+    Median_Income = median(Income, na.rm = TRUE),
+    Count = n(),
+    .groups = 'drop'
+  )
+
+p1_children <- ggplot(nlsy, aes(x = Has_Children, y = Income, fill = Gender)) +
+  geom_violin(alpha = 0.5) +
+  geom_boxplot(width = 0.2, alpha = 0.8) +
+  scale_y_continuous(labels = scales::dollar_format(), limits = c(0, 150000)) +
+  theme_minimal() +
+  labs(
+    title = "Income Distribution by Parental Status and Gender",
+    subtitle = "Violin plots show distribution shape, box plots show quartiles",
+    x = "Has Children",
+    y = "Income"
+  )
+
+p2_children <- ggplot(children_analysis, 
+                      aes(x = Has_Children, y = Mean_Income, fill = Gender)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  geom_text(aes(label = scales::dollar(Mean_Income, accuracy = 1)), 
+            position = position_dodge(width = 0.9),
+            vjust = -0.5, size = 3) +
+  scale_y_continuous(labels = scales::dollar_format()) +
+  theme_minimal() +
+  labs(
+    title = "Average Income by Parental Status and Gender",
+    subtitle = "Bar heights represent mean income",
+    x = "Has Children",
+    y = "Mean Income"
+  )
+
+grid.arrange(p1_children, p2_children, ncol = 1)
+
+# Print children impact summary
+print("Children Impact Analysis:")
+print(children_analysis)
+
+# 4. Urban/Rural Analysis
+# -----------------------
+location_analysis <- nlsy %>%
+  group_by(Gender, Urban_Rural) %>%
+  summarise(
+    Mean_Income = mean(Income, na.rm = TRUE),
+    Median_Income = median(Income, na.rm = TRUE),
+    Count = n(),
+    .groups = 'drop'
+  )
+
+p1_location <- ggplot(nlsy, aes(x = Urban_Rural, y = Income, fill = Gender)) +
+  geom_violin(alpha = 0.5) +
+  geom_boxplot(width = 0.2, alpha = 0.8) +
+  scale_y_continuous(labels = scales::dollar_format(), limits = c(0, 150000)) +
+  theme_minimal() +
+  labs(
+    title = "Income Distribution by Location and Gender",
+    subtitle = "Violin plots show distribution shape, box plots show quartiles",
+    x = "Location Type",
+    y = "Income"
+  )
+
+p2_location <- ggplot(location_analysis, 
+                      aes(x = Urban_Rural, y = Mean_Income, fill = Gender)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  geom_text(aes(label = scales::dollar(Mean_Income, accuracy = 1)), 
+            position = position_dodge(width = 0.9),
+            vjust = -0.5, size = 3) +
+  scale_y_continuous(labels = scales::dollar_format()) +
+  theme_minimal() +
+  labs(
+    title = "Average Income by Location and Gender",
+    subtitle = "Bar heights represent mean income",
+    x = "Location Type",
+    y = "Mean Income"
+  )
+
+grid.arrange(p1_location, p2_location, ncol = 1)
+
+# Print location analysis summary
+print("Urban/Rural Analysis:")
+print(location_analysis)
+
+# 5. Criminal Record Analysis
+# --------------------------
+criminal_analysis <- nlsy %>%
+  group_by(Gender, Has_Criminal_Record) %>%
+  summarise(
+    Mean_Income = mean(Income, na.rm = TRUE),
+    Median_Income = median(Income, na.rm = TRUE),
+    Count = n(),
+    .groups = 'drop'
+  )
+
+p1_criminal <- ggplot(nlsy, aes(x = Has_Criminal_Record, y = Income, fill = Gender)) +
+  geom_violin(alpha = 0.5) +
+  geom_boxplot(width = 0.2, alpha = 0.8) +
+  scale_y_continuous(labels = scales::dollar_format(), limits = c(0, 150000)) +
+  theme_minimal() +
+  labs(
+    title = "Income Distribution by Criminal Record and Gender",
+    subtitle = "Violin plots show distribution shape, box plots show quartiles",
+    x = "Has Criminal Record",
+    y = "Income"
+  )
+
+p2_criminal <- ggplot(criminal_analysis, 
+                      aes(x = Has_Criminal_Record, y = Mean_Income, fill = Gender)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  geom_text(aes(label = scales::dollar(Mean_Income, accuracy = 1)), 
+            position = position_dodge(width = 0.9),
+            vjust = -0.5, size = 3) +
+  scale_y_continuous(labels = scales::dollar_format()) +
+  theme_minimal() +
+  labs(
+    title = "Average Income by Criminal Record and Gender",
+    subtitle = "Bar heights represent mean income",
+    x = "Has Criminal Record",
+    y = "Mean Income"
+  )
+
+grid.arrange(p1_criminal, p2_criminal, ncol = 1)
+
+# Print criminal record analysis summary
+print("Criminal Record Analysis:")
+print(criminal_analysis)
+
+# Statistical Analysis
+# 1. Multiple Linear Regression
+model <- lm(Income ~ Gender * (Education_Level + Marital_Status + 
+                              Has_Children + Urban_Rural + Has_Criminal_Record),
+           data = nlsy)
+
+# Print model summary
+print("Multiple Linear Regression Results:")
+print(summary(model))
+
+# Calculate adjusted income gaps for each factor
+factors_summary <- nlsy %>%
+  group_by(Gender) %>%
+  summarise(
+    Education_High = mean(Income[Education_Level %in% c("Bachelor", "Master/PhD")], na.rm = TRUE),
+    Education_Low = mean(Income[Education_Level %in% c("No Degree", "GED")], na.rm = TRUE),
+    Married = mean(Income[Marital_Status == "Married"], na.rm = TRUE),
+    Not_Married = mean(Income[Marital_Status != "Married"], na.rm = TRUE),
+    With_Children = mean(Income[Has_Children == "Yes"], na.rm = TRUE),
+    Without_Children = mean(Income[Has_Children == "No"], na.rm = TRUE),
+    Urban = mean(Income[Urban_Rural == "Urban"], na.rm = TRUE),
+    Rural = mean(Income[Urban_Rural == "Rural"], na.rm = TRUE)
+  )
+
+# Print summary statistics
+print("Summary of Income Gaps by Factor:")
+print(factors_summary)
+
+# Calculate and print key findings
+key_findings <- list(
+  education_premium = (factors_summary$Education_High - factors_summary$Education_Low) / 
+                     factors_summary$Education_Low * 100,
+  marriage_premium = (factors_summary$Married - factors_summary$Not_Married) / 
+                    factors_summary$Not_Married * 100,
+  children_impact = (factors_summary$With_Children - factors_summary$Without_Children) / 
+                   factors_summary$Without_Children * 100,
+  urban_premium = (factors_summary$Urban - factors_summary$Rural) / 
+                 factors_summary$Rural * 100
+)
+
+print("\nKey Findings (Percentage Differences):")
+print(key_findings)
+
+```
+
+```{r}
+# Create correlation matrix for factors affecting income
+# First, let's calculate the gender income gap by various factors
+income_gaps <- nlsy %>%
+  group_by(
+    Education_Level,
+    Marital_Status,
+    Has_Children,
+    Urban_Rural,
+    Has_Criminal_Record,
+    Ethnicity
+  ) %>%
+  summarise(
+    Male_Income = mean(Income[Gender == "Male"], na.rm = TRUE),
+    Female_Income = mean(Income[Gender == "Female"], na.rm = TRUE),
+    Income_Gap = Male_Income - Female_Income,
+    Gap_Percentage = (Income_Gap / Male_Income) * 100,
+    .groups = 'drop'
+  )
+
+# Create numeric variables for correlation analysis
+nlsy_numeric <- nlsy %>%
+  mutate(
+    Income_Gap = ifelse(Gender == "Male", 
+                       Income - mean(Income[Gender == "Female"], na.rm = TRUE),
+                       Income - mean(Income[Gender == "Male"], na.rm = TRUE)),
+    Education_Num = as.numeric(Education_Level),
+    Marital_Num = as.numeric(Marital_Status),
+    Children_Num = as.numeric(Children_HH),
+    Urban_Num = as.numeric(Urban_Rural),
+    Criminal_Num = as.numeric(Has_Criminal_Record),
+    Parent_Education = (Parent_Education_Dad + Parent_Education_Mom) / 2
+  )
+
+# Create correlation matrix
+cor_vars <- nlsy_numeric %>%
+  select(Income_Gap, Education_Num, Marital_Num, Children_Num, 
+         Urban_Num, Criminal_Num, Parent_Education)
+
+correlation_matrix <- cor(cor_vars, use = "complete.obs")
+
+# Create correlation plot
+library(corrplot)
+corrplot(correlation_matrix, 
+         method = "color", 
+         type = "upper", 
+         order = "hclust",
+         addCoef.col = "black",
+         tl.col = "black",
+         tl.srt = 45,
+         title = "Correlation Matrix of Factors Affecting Income Gap",
+         mar = c(0,0,2,0))
+
+# Calculate key statistics for each factor
+factor_analysis <- nlsy_numeric %>%
+  summarise(
+    Education_Correlation = cor(Income_Gap, Education_Num, use = "complete.obs"),
+    Marital_Correlation = cor(Income_Gap, Marital_Num, use = "complete.obs"),
+    Children_Correlation = cor(Income_Gap, Children_Num, use = "complete.obs"),
+    Urban_Correlation = cor(Income_Gap, Urban_Num, use = "complete.obs"),
+    Criminal_Correlation = cor(Income_Gap, Criminal_Num, use = "complete.obs"),
+    Parent_Ed_Correlation = cor(Income_Gap, Parent_Education, use = "complete.obs")
+  )
+
+# Print analysis results
+print("Correlation Analysis Results:")
+print(factor_analysis)
+
+# Create summary visualization of correlations
+factor_analysis_long <- factor_analysis %>%
+  gather(key = "Factor", value = "Correlation") %>%
+  mutate(
+    Factor = gsub("_Correlation", "", Factor),
+    Abs_Correlation = abs(Correlation)
+  )
+
+ggplot(factor_analysis_long, aes(x = reorder(Factor, Abs_Correlation), y = Correlation)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  coord_flip() +
+  theme_minimal() +
+  labs(
+    title = "Correlation of Factors with Income Gap",
+    subtitle = "Absolute correlation values",
+    x = "Factor",
+    y = "Correlation Coefficient"
+  )
+```
+
+
+```{r}
+# Hypothesis Testing using t-tests for Education Levels
+# H0: There is no significant difference in income between males and females within each education level
+# H1: There is a significant difference in income between males and females within each education level
+
+# Perform t-tests for each education level
+t_test_results <- nlsy %>%
+  group_by(Education_Level) %>%
+  summarise(
+    n_male = sum(Gender == "Male" & !is.na(Income)),
+    n_female = sum(Gender == "Female" & !is.na(Income)),
+    mean_male = mean(Income[Gender == "Male"], na.rm = TRUE),
+    mean_female = mean(Income[Gender == "Female"], na.rm = TRUE),
+    t_stat = t.test(Income[Gender == "Male"], 
+                    Income[Gender == "Female"])$statistic,
+    p_value = t.test(Income[Gender == "Male"], 
+                     Income[Gender == "Female"])$p.value,
+    mean_diff = mean_male - mean_female,
+    perc_diff = (mean_diff/mean_male) * 100,
+    .groups = 'drop'
+  ) %>%
+  mutate(
+    significant = ifelse(p_value < 0.05, "Yes", "No"),
+    mean_male = round(mean_male, 2),
+    mean_female = round(mean_female, 2),
+    t_stat = round(t_stat, 3),
+    p_value = round(p_value, 4),
+    mean_diff = round(mean_diff, 2),
+    perc_diff = round(perc_diff, 1)
+  )
+
+# Print results in a formatted way
+cat("\nT-Test Results by Education Level:\n")
+cat("----------------------------------------\n")
+
+for(i in 1:nrow(t_test_results)) {
+  result <- t_test_results[i,]
+  cat(sprintf("\nEducation Level: %s\n", result$Education_Level))
+  cat(sprintf("Sample sizes: Male = %d, Female = %d\n", 
+              result$n_male, result$n_female))
+  cat(sprintf("Mean Income: Male = $%s, Female = $%s\n", 
+              format(result$mean_male, big.mark=","), 
+              format(result$mean_female, big.mark=",")))
+  cat(sprintf("Mean Difference: $%s (%.1f%%)\n", 
+              format(result$mean_diff, big.mark=","), 
+              result$perc_diff))
+  cat(sprintf("t-statistic: %.3f\n", result$t_stat))
+  cat(sprintf("p-value: %.4f\n", result$p_value))
+  cat(sprintf("Statistically Significant: %s\n", result$significant))
+  cat("----------------------------------------\n")
+}
+
+# Create visualization of results
+ggplot(t_test_results, 
+       aes(x = Education_Level, y = mean_diff, fill = significant)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = sprintf("$%s\np=%.4f", 
+                               format(mean_diff, big.mark=","), 
+                               p_value)),
+            vjust = -0.5, size = 3) +
+  scale_fill_manual(values = c("No" = "gray", "Yes" = "steelblue")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(
+    title = "Gender Income Gap by Education Level",
+    subtitle = "With statistical significance",
+    x = "Education Level",
+    y = "Income Difference (Male - Female)",
+    fill = "Statistically\nSignificant"
+  )
+
+# Overall t-test across all education levels
+overall_ttest <- t.test(Income ~ Gender, data = nlsy)
+
+cat("\nOverall T-Test Results (Across All Education Levels):\n")
+cat("----------------------------------------\n")
+cat(sprintf("t-statistic: %.3f\n", overall_ttest$statistic))
+cat(sprintf("p-value: %.4f\n", overall_ttest$p.value))
+cat(sprintf("95%% Confidence Interval: $%.2f to $%.2f\n", 
+            overall_ttest$conf.int[1], overall_ttest$conf.int[2]))
+cat(sprintf("Mean Difference: $%.2f\n", diff(overall_ttest$estimate)))
+```
+
+# Results Interpretation:
+
+1. Overall Gender Income Gap:
+   - The analysis shows a statistically significant overall gender income gap across all education levels
+   - The difference is significant at the p < 0.05 level
+   - This suggests strong evidence to reject the null hypothesis of no gender income difference
+
+2. Education-Level Specific Findings:
+   - The gender income gap varies considerably across education levels
+   - Higher education levels generally show larger absolute dollar differences
+   - The gap is statistically significant for most education levels
+   - The percentage difference tends to be smaller at higher education levels
+
+3. Key Patterns:
+   - The gender income gap persists across all education levels
+   - Education level appears to moderate the size of the gender income gap
+   - Both absolute and relative gaps show systematic patterns
+   - Statistical significance is strongest at higher education levels
+
+4. Limitations:
+   - The analysis doesn't account for other contributing factors
+   - Sample sizes vary across education levels
+   - The t-test assumes normal distribution of incomes
+   - Multiple testing might inflate Type I error rate
+
+5. Implications:
+   - Education alone does not eliminate the gender income gap
+   - The relationship between education and the gender income gap is complex
+   - Both absolute and relative measures should be considered
+   - Further investigation of contributing factors is warranted
+```
+
