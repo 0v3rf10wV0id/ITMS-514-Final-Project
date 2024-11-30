@@ -3,7 +3,10 @@
 title: "Final project starter script"
 author: ''
 date: ''
-output: html_document
+output:
+  pdf_document:
+    latex_engine: xelatex
+  html_document: default
 ---
 
 #### Package loading
@@ -1217,7 +1220,7 @@ The analysis reveals several key findings:
 3. **Visual Analysis**:
    - The scatter plot reveals markedly different relationships between number of children and income for each gender
    - The trend lines show dramatically different slopes for men and women
-   - Note: 5,882 data points were removed due to missing values or being outside the scale range, which should be considered when interpreting results
+   - Note: 5,882 data points were removed due to missing values or being outside the scale range, which represents a substantial portion of the data and should be carefully considered when interpreting results
 
 #### Limitations
 - Missing data (5,882 removed points) might affect the analysis
@@ -1353,3 +1356,279 @@ Given these highly significant findings, we should:
   * Retirement planning and pension systems
 
 ---
+
+### Analysis of Ethnicity Impact on Gender Income Gap
+
+We'll analyze how ethnicity (using the race variable) relates to income differences between genders, following the same correlation-based approach used in our previous analyses.
+
+#### Hypothesis
+- **H₀**: The correlation between ethnicity and income is equal for both genders
+- **H₁**: The correlation between ethnicity and income differs by gender
+- **Significance Level (α)**: 0.05
+
+#### Analysis
+
+```{r ethnicity_analysis}
+# Clean and prepare ethnicity data
+nlsy_ethnicity <- nlsy %>%
+  select(Gender, Income, race) %>%
+  # Convert race to numeric for correlation analysis
+  mutate(race = as.numeric(race))
+
+# Create visualization of income by gender and ethnicity
+p1 <- ggplot(nlsy_ethnicity, 
+       aes(x = race, y = Income, color = Gender)) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(method = "lm") +
+  scale_x_continuous(breaks = 1:4,
+                    labels = c("Black", "Hispanic", 
+                             "Mixed Race\n(Non-Hispanic)", 
+                             "Non-Black/\nNon-Hispanic")) +
+  scale_y_continuous(labels = scales::dollar_format(), limits = c(0, 150000)) +
+  labs(
+    title = "Income vs Ethnicity by Gender",
+    x = "Ethnicity",
+    y = "Annual Income"
+  ) +
+  theme_minimal()
+
+# Calculate correlation by gender
+correlations <- nlsy_ethnicity %>%
+  group_by(Gender) %>%
+  summarise(
+    correlation = cor(Income, race, use = "complete.obs"),
+    n = n()
+  )
+
+# Test if correlation difference is significant
+# Fisher's Z transformation to test difference between correlations
+male_cor <- correlations$correlation[correlations$Gender == "Male"]
+female_cor <- correlations$correlation[correlations$Gender == "Female"]
+male_n <- correlations$n[correlations$Gender == "Male"]
+female_n <- correlations$n[correlations$Gender == "Female"]
+
+# Fisher's Z transformation
+z_male <- 0.5 * log((1 + male_cor) / (1 - male_cor))
+z_female <- 0.5 * log((1 + female_cor) / (1 - female_cor))
+z_diff <- z_male - z_female
+se_diff <- sqrt(1/(male_n - 3) + 1/(female_n - 3))
+z_stat <- z_diff / se_diff
+p_value <- 2 * (1 - pnorm(abs(z_stat)))
+
+# Print results
+print("Hypothesis Test Results:")
+print("H0: The correlation between ethnicity and income is equal for both genders")
+print("H1: The correlation between ethnicity and income differs by gender")
+print(paste("Z-statistic:", round(z_stat, 3)))
+print(paste("p-value:", round(p_value, 4)))
+print("\nCorrelations by Gender:")
+print(correlations)
+
+# Display visualization
+p1
+```
+
+#### Results Interpretation
+
+The analysis reveals several key findings:
+
+1. **Statistical Test Results**: 
+   - Z-statistic: 2.58
+   - p-value: 0.0099 (0.99%)
+   - Since p-value (0.0099) < α (0.05), we reject the null hypothesis
+
+2. **Conclusion**: 
+   - There is strong statistical evidence that the correlation between ethnicity and income differs significantly between genders
+   - The low p-value (0.99%) indicates this difference is unlikely to have occurred by chance
+   - The positive Z-statistic (2.58) indicates that the correlation is stronger for males than females
+   - This suggests that the relationship between ethnicity and income is more pronounced for men than for women
+
+3. **Visual Analysis**:
+   - The scatter plot reveals different relationships between ethnicity and income for each gender
+   - The trend lines show distinct slopes for men and women, confirming our statistical finding
+   - Note: 4,014 data points were removed due to missing values or being outside the scale range, which should be considered when interpreting results
+
+#### Limitations
+- Treating ethnicity as a numeric variable for correlation analysis may not be ideal
+- Missing data (4,014 removed points) might affect the analysis
+- Some ethnic groups may have small sample sizes
+- Categorical nature of ethnicity variable may mask within-group variation
+- Intersectional effects with other variables not captured
+
+#### Next Steps
+Given these significant findings, we should:
+- Consider alternative statistical approaches more suitable for categorical variables (e.g., ANOVA)
+- Investigate intersectional effects with:
+  * Education level
+  * Age
+  * Geographic location
+  * Industry/occupation
+- Analyze whether patterns have changed over time
+- Consider policy implications for addressing both gender and ethnic disparities in income
+- Examine if these patterns vary by region or urban/rural settings
+
+---
+
+### Analysis of Health Status Impact on Gender Income Gap
+
+We'll analyze how health status (using PC12-024_1997) relates to income differences between genders, following the same correlation-based approach used in our previous analyses.
+
+#### Hypothesis
+- **H₀**: The correlation between health status and income is equal for both genders
+- **H₁**: The correlation between health status and income differs by gender
+- **Significance Level (α)**: 0.05
+
+#### Analysis
+
+```{r health_status_analysis}
+# Clean and prepare health status data
+nlsy_health <- nlsy %>%
+  rename(
+    health_status = `PC12-024_1997`
+  ) %>%
+  select(Gender, Income, health_status)
+
+# Create visualization of income by gender and health status
+p1 <- ggplot(nlsy_health, 
+       aes(x = health_status, y = Income, color = Gender)) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(method = "lm") +
+  scale_y_continuous(labels = scales::dollar_format(), limits = c(0, 150000)) +
+  labs(
+    title = "Income vs Health Status by Gender",
+    x = "Health Status",
+    y = "Annual Income"
+  ) +
+  theme_minimal()
+
+# Calculate correlation by gender
+correlations <- nlsy_health %>%
+  group_by(Gender) %>%
+  summarise(
+    correlation = cor(Income, health_status, use = "complete.obs"),
+    n = n()
+  )
+
+# Test if correlation difference is significant
+# Fisher's Z transformation to test difference between correlations
+male_cor <- correlations$correlation[correlations$Gender == "Male"]
+female_cor <- correlations$correlation[correlations$Gender == "Female"]
+male_n <- correlations$n[correlations$Gender == "Male"]
+female_n <- correlations$n[correlations$Gender == "Female"]
+
+# Fisher's Z transformation
+z_male <- 0.5 * log((1 + male_cor) / (1 - male_cor))
+z_female <- 0.5 * log((1 + female_cor) / (1 - female_cor))
+z_diff <- z_male - z_female
+se_diff <- sqrt(1/(male_n - 3) + 1/(female_n - 3))
+z_stat <- z_diff / se_diff
+p_value <- 2 * (1 - pnorm(abs(z_stat)))
+
+# Print results
+print("Hypothesis Test Results:")
+print("H0: The correlation between health status and income is equal for both genders")
+print("H1: The correlation between health status and income differs by gender")
+print(paste("Z-statistic:", round(z_stat, 3)))
+print(paste("p-value:", round(p_value, 4)))
+print("\nCorrelations by Gender:")
+print(correlations)
+
+# Display visualization
+p1
+```
+
+#### Results Interpretation
+
+The analysis reveals several key findings:
+
+1. **Statistical Test Results**: 
+   - Z-statistic: 40.475
+   - p-value: < 0.0001
+   - Since p-value (< 0.0001) < α (0.05), we strongly reject the null hypothesis
+
+2. **Conclusion**: 
+   - There is extremely strong statistical evidence that the correlation between health status and income differs significantly between genders
+   - The extremely low p-value (< 0.0001) indicates this difference is virtually impossible to have occurred by chance
+   - The very large Z-statistic (40.475) indicates a dramatically stronger correlation for males than females
+   - This is the largest Z-statistic we've seen in our analyses, suggesting health status shows the most pronounced gender difference in its relationship with income
+
+3. **Visual Analysis**:
+   - The scatter plot reveals markedly different relationships between health status and income for each gender
+   - The trend lines show dramatically different slopes for men and women
+   - Note: 8,086 data points were removed due to missing values or being outside the scale range, which represents a substantial portion of the data and should be carefully considered when interpreting results
+
+#### Limitations
+- Missing data (8,086 removed points) represents a very large portion of the dataset
+- Health status is measured in 1997, while income is from a later year
+- Self-reported health status may be subjective
+- The relationship between health and income may be bidirectional
+- Other health-related factors not captured
+
+#### Next Steps
+Given these extremely significant findings, we should:
+- Investigate why health status has such a dramatically different relationship with income between genders
+- Consider how this relationship might be affected by:
+  * Healthcare access differences
+  * Occupational health hazards by gender
+  * Work-life balance and stress levels
+  * Disability accommodation differences
+- Examine whether more recent health data shows similar patterns
+- Consider policy implications for:
+  * Healthcare access equity
+  * Workplace health programs
+  * Disability accommodation policies
+  * Gender-specific health interventions
+
+---
+
+### Analysis Summary of Gender Income Gap Factors
+
+#### Overview
+We analyzed 12 different factors and their relationship with the gender income gap using correlation analysis and Fisher's Z-transformation tests. Here's a summary of the findings, organized by significance and effect size.
+
+#### Results Summary Table
+
+| Factor | Z-statistic | P-value | Significant? | Correlation Strength |
+|--------|-------------|----------|--------------|---------------------|
+| Health Status | 40.475 | <0.0001 | Yes | Very Strong |
+| Children | 15.920 | <0.0001 | Yes | Very Strong |
+| Parents' Education | -3.612 | 0.0003 | Yes | Strong |
+| Criminal History | -3.015 | 0.0026 | Yes | Strong |
+| Age | 4.454 | <0.0001 | Yes | Strong |
+| Education Level | -4.303 | <0.0001 | Yes | Strong |
+| Ethnicity | 2.580 | 0.0099 | Yes | Moderate |
+| Work Experience | 2.161 | 0.0307 | Yes | Moderate |
+| Marital Status | 4.392 | <0.0001 | Yes | Moderate |
+| Profession/Industry | 1.934 | 0.0531 | No | Weak |
+| Region (Urban/Rural) | 1.800 | 0.0719 | No | Weak |
+| Drug Use | 0.367 | 0.7134 | No | Very Weak |
+
+#### Recommendations for Linear Regression
+
+##### Factors to Include
+
+**Primary Factors (Very Strong Effect):**
+
+- Health Status
+- Number of Children
+
+**Secondary Factors (Strong Effect):**
+
+- Parents' Education
+- Criminal History 
+- Age
+- Education Level
+
+**Tertiary Factors (Moderate Effect):**
+
+- Ethnicity
+- Work Experience
+- Marital Status
+
+##### Factors to Exclude
+
+The following factors showed weak or insignificant relationships and should be excluded from the regression model:
+
+- Profession/Industry
+- Region (Urban/Rural)
+- Drug Use
