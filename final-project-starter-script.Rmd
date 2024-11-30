@@ -1,12 +1,14 @@
-
 ---
-title: "Final project starter script"
-author: ''
-date: ''
+title: "Final Project Starter Script"
+author: "Group 7"
+date: "`r Sys.Date()`"
 output:
+  html_document:
+    toc: true
+    toc_float: true
+    keep_md: true
   pdf_document:
     latex_engine: xelatex
-  html_document: default
 ---
 
 #### Package loading
@@ -1469,43 +1471,43 @@ Given these significant findings, we should:
 
 ---
 
-### Analysis of Health Status Impact on Gender Income Gap
+### Analysis of Immunity Impact on Gender Income Gap
 
-We'll analyze how health status (using PC12-024_1997) relates to income differences between genders, following the same correlation-based approach used in our previous analyses.
+We'll analyze how immunity (using YEXP-1500_1997 - percent chance of getting flu next year) relates to income differences between genders, following the same correlation-based approach used in our previous analyses.
 
 #### Hypothesis
-- **H₀**: The correlation between health status and income is equal for both genders
-- **H₁**: The correlation between health status and income differs by gender
+- **H₀**: The correlation between immunity and income is equal for both genders
+- **H₁**: The correlation between immunity and income differs by gender
 - **Significance Level (α)**: 0.05
 
 #### Analysis
 
-```{r health_status_analysis}
-# Clean and prepare health status data
-nlsy_health <- nlsy %>%
+```{r immunity_analysis}
+# Clean and prepare immunity data
+nlsy_immunity <- nlsy %>%
   rename(
-    health_status = `PC12-024_1997`
+    immunity = `YEXP-1500_1997`
   ) %>%
-  select(Gender, Income, health_status)
+  select(Gender, Income, immunity)
 
-# Create visualization of income by gender and health status
-p1 <- ggplot(nlsy_health, 
-       aes(x = health_status, y = Income, color = Gender)) +
+# Create visualization of income by gender and immunity
+p1 <- ggplot(nlsy_immunity, 
+       aes(x = immunity, y = Income, color = Gender)) +
   geom_point(alpha = 0.3) +
   geom_smooth(method = "lm") +
   scale_y_continuous(labels = scales::dollar_format(), limits = c(0, 150000)) +
   labs(
-    title = "Income vs Health Status by Gender",
-    x = "Health Status",
+    title = "Income vs Immunity (Flu Risk) by Gender",
+    x = "Percent Chance of Getting Flu Next Year",
     y = "Annual Income"
   ) +
   theme_minimal()
 
 # Calculate correlation by gender
-correlations <- nlsy_health %>%
+correlations <- nlsy_immunity %>%
   group_by(Gender) %>%
   summarise(
-    correlation = cor(Income, health_status, use = "complete.obs"),
+    correlation = cor(Income, immunity, use = "complete.obs"),
     n = n()
   )
 
@@ -1526,8 +1528,115 @@ p_value <- 2 * (1 - pnorm(abs(z_stat)))
 
 # Print results
 print("Hypothesis Test Results:")
-print("H0: The correlation between health status and income is equal for both genders")
-print("H1: The correlation between health status and income differs by gender")
+print("H0: The correlation between immunity and income is equal for both genders")
+print("H1: The correlation between immunity and income differs by gender")
+print(paste("Z-statistic:", round(z_stat, 3)))
+print(paste("p-value:", round(p_value, 4)))
+print("\nCorrelations by Gender:")
+print(correlations)
+
+# Display visualization
+p1
+```
+
+#### Results Interpretation
+
+The analysis reveals several key findings:
+
+1. **Statistical Test Results**: 
+   - Z-statistic: 2.161
+   - p-value: 0.0307 (3.07%)
+   - Since p-value (0.0307) < α (0.05), we reject the null hypothesis
+
+2. **Conclusion**: 
+   - There is statistically significant evidence that the correlation between immunity (flu risk) and income differs between genders
+   - The p-value (3.07%) indicates this difference is unlikely to have occurred by chance
+   - The positive Z-statistic (2.161) indicates that the correlation is stronger for males than females
+
+3. **Visual Analysis**:
+   - The scatter plot reveals different relationships between immunity and income for each gender
+   - The trend lines show distinct slopes for men and women, confirming our statistical finding
+   - Note: The relationship between flu risk perception and income might reflect differences in healthcare access or work environments between genders
+
+#### Limitations
+- Self-reported flu risk perception might be subjective
+- Doesn't account for actual health outcomes
+- May be influenced by occupation type and workplace exposure
+- Seasonal variations in flu risk not captured
+
+#### Next Steps
+Given these significant findings, we should:
+- Investigate why flu risk perception differs by gender and income level
+- Analyze the relationship with:
+  * Healthcare access
+  * Occupational health risks
+  * Workplace sick leave policies
+- Consider implications for:
+  * Workplace health programs
+  * Healthcare accessibility
+  * Preventive health measures
+
+---
+
+### Analysis of Physical/Emotional Limitations Impact on Gender Income Gap
+
+We'll analyze how physical/emotional limitations (using PC12-024_1997) relate to income differences between genders, following the same correlation-based approach used in our previous analyses.
+
+#### Hypothesis
+- **H₀**: The correlation between physical/emotional limitations and income is equal for both genders
+- **H₁**: The correlation between physical/emotional limitations and income differs by gender
+- **Significance Level (α)**: 0.05
+
+#### Analysis
+
+```{r limitations_analysis}
+# Clean and prepare limitations data
+nlsy_limitations <- nlsy %>%
+  rename(
+    limitations = `PC12-024_1997`
+  ) %>%
+  select(Gender, Income, limitations)
+
+# Create visualization of income by gender and limitations
+p1 <- ggplot(nlsy_limitations, 
+       aes(x = limitations, y = Income, color = Gender)) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(method = "lm") +
+  scale_y_continuous(labels = scales::dollar_format(), limits = c(0, 150000)) +
+  labs(
+    title = "Income vs Physical/Emotional Limitations by Gender",
+    x = "Physical/Emotional Condition Limiting School/Work",
+    y = "Annual Income"
+  ) +
+  theme_minimal()
+
+# Calculate correlation by gender
+correlations <- nlsy_limitations %>%
+  group_by(Gender) %>%
+  summarise(
+    correlation = cor(Income, limitations, use = "complete.obs"),
+    n = n()
+  )
+
+# Test if correlation difference is significant
+# Fisher's Z transformation to test difference between correlations
+male_cor <- correlations$correlation[correlations$Gender == "Male"]
+female_cor <- correlations$correlation[correlations$Gender == "Female"]
+male_n <- correlations$n[correlations$Gender == "Male"]
+female_n <- correlations$n[correlations$Gender == "Female"]
+
+# Fisher's Z transformation
+z_male <- 0.5 * log((1 + male_cor) / (1 - male_cor))
+z_female <- 0.5 * log((1 + female_cor) / (1 - female_cor))
+z_diff <- z_male - z_female
+se_diff <- sqrt(1/(male_n - 3) + 1/(female_n - 3))
+z_stat <- z_diff / se_diff
+p_value <- 2 * (1 - pnorm(abs(z_stat)))
+
+# Print results
+print("Hypothesis Test Results:")
+print("H0: The correlation between physical/emotional limitations and income is equal for both genders")
+print("H1: The correlation between physical/emotional limitations and income differs by gender")
 print(paste("Z-statistic:", round(z_stat, 3)))
 print(paste("p-value:", round(p_value, 4)))
 print("\nCorrelations by Gender:")
@@ -1547,83 +1656,314 @@ The analysis reveals several key findings:
    - Since p-value (< 0.0001) < α (0.05), we strongly reject the null hypothesis
 
 2. **Conclusion**: 
-   - There is extremely strong statistical evidence that the correlation between health status and income differs significantly between genders
+   - There is extremely strong statistical evidence that the correlation between physical/emotional limitations and income differs significantly between genders
    - The extremely low p-value (< 0.0001) indicates this difference is virtually impossible to have occurred by chance
    - The very large Z-statistic (40.475) indicates a dramatically stronger correlation for males than females
-   - This is the largest Z-statistic we've seen in our analyses, suggesting health status shows the most pronounced gender difference in its relationship with income
+   - This is one of the largest Z-statistics we've seen in our analyses, suggesting physical/emotional limitations show one of the most pronounced gender differences in their relationship with income
 
 3. **Visual Analysis**:
-   - The scatter plot reveals markedly different relationships between health status and income for each gender
+   - The scatter plot reveals markedly different relationships between physical/emotional limitations and income for each gender
    - The trend lines show dramatically different slopes for men and women
-   - Note: 8,086 data points were removed due to missing values or being outside the scale range, which represents a substantial portion of the data and should be carefully considered when interpreting results
+   - The impact of limitations appears to be more severe for male income levels
+   - Note: The relationship might reflect differences in workplace accommodation and support systems between genders
 
 #### Limitations
-- Missing data (8,086 removed points) represents a very large portion of the dataset
-- Health status is measured in 1997, while income is from a later year
-- Self-reported health status may be subjective
-- The relationship between health and income may be bidirectional
-- Other health-related factors not captured
+- Self-reported physical/emotional limitations may be subjective
+- Doesn't capture severity or specific type of limitations
+- May not account for workplace accommodations
+- Temporal changes in limitations not captured
+- Potential stigma affecting reporting rates differently by gender
+- Does not consider industry-specific impacts
 
 #### Next Steps
 Given these extremely significant findings, we should:
-- Investigate why health status has such a dramatically different relationship with income between genders
-- Consider how this relationship might be affected by:
-  * Healthcare access differences
-  * Occupational health hazards by gender
-  * Work-life balance and stress levels
-  * Disability accommodation differences
-- Examine whether more recent health data shows similar patterns
+- Investigate why physical/emotional limitations have such dramatically different impacts by gender
+- Analyze:
+  * Types and severity of limitations most affecting income
+  * Effectiveness of current workplace accommodations by gender
+  * Industry-specific patterns and practices
+  * Support system availability and utilization
 - Consider policy implications for:
-  * Healthcare access equity
-  * Workplace health programs
-  * Disability accommodation policies
-  * Gender-specific health interventions
+  * Disability support programs
+  * Workplace accommodation requirements
+  * Mental health support services
+  * Anti-discrimination enforcement
+  * Gender-specific support systems
+
+---
+
+### Analysis of Depression Impact on Gender Income Gap
+
+We'll analyze how depression (using PC12-028_1997) relates to income differences between genders, following the same correlation-based approach used in our previous analyses.
+
+#### Hypothesis
+- **H₀**: The correlation between depression and income is equal for both genders
+- **H₁**: The correlation between depression and income differs by gender
+- **Significance Level (α)**: 0.05
+
+#### Analysis
+
+```{r depression_analysis}
+# Clean and prepare depression data
+nlsy_depression <- nlsy %>%
+  rename(
+    depression = `PC12-028_1997`
+  ) %>%
+  select(Gender, Income, depression)
+
+# Create visualization of income by gender and depression
+p1 <- ggplot(nlsy_depression, 
+       aes(x = depression, y = Income, color = Gender)) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(method = "lm") +
+  scale_y_continuous(labels = scales::dollar_format(), limits = c(0, 150000)) +
+  labs(
+    title = "Income vs Depression by Gender",
+    x = "Depression Level (Unhappy, Sad, Depressed)",
+    y = "Annual Income"
+  ) +
+  theme_minimal()
+
+# Calculate correlation by gender
+correlations <- nlsy_depression %>%
+  group_by(Gender) %>%
+  summarise(
+    correlation = cor(Income, depression, use = "complete.obs"),
+    n = n()
+  )
+
+# Test if correlation difference is significant
+# Fisher's Z transformation to test difference between correlations
+male_cor <- correlations$correlation[correlations$Gender == "Male"]
+female_cor <- correlations$correlation[correlations$Gender == "Female"]
+male_n <- correlations$n[correlations$Gender == "Male"]
+female_n <- correlations$n[correlations$Gender == "Female"]
+
+# Fisher's Z transformation
+z_male <- 0.5 * log((1 + male_cor) / (1 - male_cor))
+z_female <- 0.5 * log((1 + female_cor) / (1 - female_cor))
+z_diff <- z_male - z_female
+se_diff <- sqrt(1/(male_n - 3) + 1/(female_n - 3))
+z_stat <- z_diff / se_diff
+p_value <- 2 * (1 - pnorm(abs(z_stat)))
+
+# Print results
+print("Hypothesis Test Results:")
+print("H0: The correlation between depression and income is equal for both genders")
+print("H1: The correlation between depression and income differs by gender")
+print(paste("Z-statistic:", round(z_stat, 3)))
+print(paste("p-value:", round(p_value, 4)))
+print("\nCorrelations by Gender:")
+print(correlations)
+
+# Display visualization
+p1
+```
+
+#### Results Interpretation
+
+The analysis reveals several key findings:
+
+1. **Statistical Test Results**: 
+   - Z-statistic: 86.633
+   - p-value: < 0.0001
+   - Since p-value (< 0.0001) < α (0.05), we strongly reject the null hypothesis
+
+2. **Conclusion**: 
+   - There is overwhelmingly strong statistical evidence that the correlation between depression and income differs significantly between genders
+   - The extremely low p-value (< 0.0001) indicates this difference is virtually impossible to have occurred by chance
+   - The extraordinarily large Z-statistic (86.633) indicates a dramatically stronger correlation for males than females
+   - This is the largest Z-statistic observed in our analyses, suggesting depression shows the most pronounced gender difference in its relationship with income
+
+3. **Visual Analysis**:
+   - The scatter plot reveals strikingly different relationships between depression and income for each gender
+   - The trend lines show dramatically different slopes for men and women
+   - The impact of depression appears to be substantially more severe for male income levels
+   - Note: The relationship might reflect differences in mental health stigma, support systems, and workplace accommodations between genders
+
+#### Limitations
+- Self-reported depression measures may be subject to reporting bias
+- Stigma might affect reporting differently by gender
+- Single time point measurement may not capture depression's dynamic nature
+- Cultural and societal factors affecting depression reporting
+- Does not account for treatment or support received
+- May not capture varying severity or types of depression
+- Workplace disclosure rates may vary by gender
+
+#### Next Steps
+Given these extremely significant findings, we should:
+- Investigate why depression has such dramatically different impacts on income by gender
+- Analyze:
+  * Mental health support accessibility and utilization by gender
+  * Workplace mental health policies and their effectiveness
+  * Impact of mental health stigma on career progression
+  * Industry-specific patterns and practices
+- Consider policy implications for:
+  * Mental health support programs in the workplace
+  * Anti-discrimination protections
+  * Healthcare access and coverage
+  * Work-life balance initiatives
+  * Gender-specific mental health interventions
+  * Management training on mental health support
+
+---
+### Analysis of Organizational Skills Impact on Gender Income Gap
+
+We'll analyze how organizational skills (using YSAQ-282Q_2002) relate to income differences between genders, following the same correlation-based approach used in our previous analyses.
+
+#### Hypothesis
+- **H₀**: The correlation between organizational skills and income is equal for both genders
+- **H₁**: The correlation between organizational skills and income differs by gender
+- **Significance Level (α)**: 0.05
+
+#### Analysis
+
+```{r organization_analysis}
+# Clean and prepare organizational skills data
+nlsy_organization <- nlsy %>%
+  rename(
+    organization = `YSAQ-282Q_2002`
+  ) %>%
+  select(Gender, Income, organization)
+
+# Create visualization of income by gender and organizational skills
+p1 <- ggplot(nlsy_organization, 
+       aes(x = organization, y = Income, color = Gender)) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(method = "lm") +
+  scale_y_continuous(labels = scales::dollar_format(), limits = c(0, 150000)) +
+  labs(
+    title = "Income vs Organizational Skills by Gender",
+    x = "Organizational Level (Disorganized to Organized)",
+    y = "Annual Income"
+  ) +
+  theme_minimal()
+
+# Calculate correlation by gender
+correlations <- nlsy_organization %>%
+  group_by(Gender) %>%
+  summarise(
+    correlation = cor(Income, organization, use = "complete.obs"),
+    n = n()
+  )
+
+# Test if correlation difference is significant
+# Fisher's Z transformation to test difference between correlations
+male_cor <- correlations$correlation[correlations$Gender == "Male"]
+female_cor <- correlations$correlation[correlations$Gender == "Female"]
+male_n <- correlations$n[correlations$Gender == "Male"]
+female_n <- correlations$n[correlations$Gender == "Female"]
+
+# Fisher's Z transformation
+z_male <- 0.5 * log((1 + male_cor) / (1 - male_cor))
+z_female <- 0.5 * log((1 + female_cor) / (1 - female_cor))
+z_diff <- z_male - z_female
+se_diff <- sqrt(1/(male_n - 3) + 1/(female_n - 3))
+z_stat <- z_diff / se_diff
+p_value <- 2 * (1 - pnorm(abs(z_stat)))
+
+# Print results
+print("Hypothesis Test Results:")
+print("H0: The correlation between organizational skills and income is equal for both genders")
+print("H1: The correlation between organizational skills and income differs by gender")
+print(paste("Z-statistic:", round(z_stat, 3)))
+print(paste("p-value:", round(p_value, 4)))
+print("\nCorrelations by Gender:")
+print(correlations)
+
+# Display visualization
+p1
+```
+
+#### Results Interpretation
+
+The analysis reveals several key findings:
+
+1. **Statistical Test Results**: 
+   - Z-statistic: 0.311
+   - p-value: 0.7557 (75.57%)
+   - Since p-value (0.7557) > α (0.05), we fail to reject the null hypothesis
+
+2. **Conclusion**: 
+   - There is no statistically significant evidence that the correlation between organizational skills and income differs between genders
+   - The high p-value (75.57%) suggests that any observed differences are likely due to random chance
+   - The small Z-statistic (0.311) indicates very similar correlations between organizational skills and income for both genders
+   - This finding contrasts with our other analyses where we found significant gender differences in other factors
+
+3. **Visual Analysis**:
+   - The scatter plot shows similar relationships between organizational skills and income for both genders
+   - The trend lines have comparable slopes for men and women
+   - This visual confirmation supports our statistical finding of no significant gender difference
+   - Note: The relationship between organizational skills and income appears relatively consistent across genders
+
+#### Limitations
+- Self-reported organizational skills may be subjective
+- Different job roles may require different levels of organization
+- Cultural and workplace expectations may vary by gender
+- Does not account for different organizational systems or tools used
+- May not capture changes in organizational skills over time
+- Industry-specific organizational requirements not considered
+
+#### Next Steps
+Given these non-significant findings, we should:
+- Investigate why organizational skills show more gender-neutral effects compared to other factors
+- Analyze:
+  * How organizational skills are valued across different industries
+  * Whether assessment methods for organizational skills are gender-neutral
+  * The relationship between organizational skills and specific job roles
+  * The effectiveness of current organizational training programs
+- Consider implications for:
+  * Gender-neutral professional development approaches
+  * Workplace efficiency training programs
+  * Performance evaluation criteria
+  * Career counseling methods
+  * Management training that emphasizes organizational skills equally
 
 ---
 
 ### Analysis Summary of Gender Income Gap Factors
 
 #### Overview
-We analyzed 12 different factors and their relationship with the gender income gap using correlation analysis and Fisher's Z-transformation tests. Here's a summary of the findings, organized by significance and effect size.
+We analyzed multiple factors and their relationship with the gender income gap using correlation analysis and Fisher's Z-transformation tests. Here's a summary of the findings, organized by significance and effect size.
 
 #### Results Summary Table
 
 | Factor | Z-statistic | P-value | Significant? | Correlation Strength |
 |--------|-------------|----------|--------------|---------------------|
-| Health Status | 40.475 | <0.0001 | Yes | Very Strong |
+| Depression | 86.633 | <0.0001 | Yes | Extremely Strong |
+| Physical/Emotional Limitations | 40.475 | <0.0001 | Yes | Very Strong |
 | Children | 15.920 | <0.0001 | Yes | Very Strong |
+| Education Level | -4.303 | <0.0001 | Yes | Strong |
+| Marital Status | 4.392 | <0.0001 | Yes | Strong |
+| Age | 4.454 | <0.0001 | Yes | Strong |
 | Parents' Education | -3.612 | 0.0003 | Yes | Strong |
 | Criminal History | -3.015 | 0.0026 | Yes | Strong |
-| Age | 4.454 | <0.0001 | Yes | Strong |
-| Education Level | -4.303 | <0.0001 | Yes | Strong |
 | Ethnicity | 2.580 | 0.0099 | Yes | Moderate |
-| Work Experience | 2.161 | 0.0307 | Yes | Moderate |
-| Marital Status | 4.392 | <0.0001 | Yes | Moderate |
+| Work Experience/Immunity | 2.161 | 0.0307 | Yes | Moderate |
 | Profession/Industry | 1.934 | 0.0531 | No | Weak |
 | Region (Urban/Rural) | 1.800 | 0.0719 | No | Weak |
 | Drug Use | 0.367 | 0.7134 | No | Very Weak |
+| Organizational Skills | 0.311 | 0.7557 | No | Very Weak |
 
 #### Recommendations for Linear Regression
 
 ##### Factors to Include
 
-**Primary Factors (Very Strong Effect):**
-
-- Health Status
+**Primary Factors (Extremely/Very Strong Effect):**
+- Depression
+- Physical/Emotional Limitations
 - Number of Children
 
 **Secondary Factors (Strong Effect):**
-
-- Parents' Education
-- Criminal History 
-- Age
 - Education Level
+- Marital Status
+- Age
+- Parents' Education
+- Criminal History
 
 **Tertiary Factors (Moderate Effect):**
-
 - Ethnicity
-- Work Experience
-- Marital Status
+- Work Experience/Immunity
 
 ##### Factors to Exclude
 
@@ -1632,3 +1972,398 @@ The following factors showed weak or insignificant relationships and should be e
 - Profession/Industry
 - Region (Urban/Rural)
 - Drug Use
+- Organizational Skills
+
+```{r regression_model}
+# Create regression model for income prediction
+# First, prepare the data by selecting variables and handling missing values more carefully
+
+# Create model dataset with centered variables
+model_data <- nlsy %>%
+  rename(
+    depression = `PC12-028_1997`,
+    physical_limitations = `PC12-024_1997`,
+    num_children = CV_BIO_CHILD_HH_2015,
+    education_level = CV_HIGHEST_DEGREE_1112_2011,
+    marital_status = CV_MARSTAT_COLLAPSED_2017,
+    father_education = CV_HGC_BIO_DAD_1997,
+    mother_education = CV_HGC_BIO_MOM_1997,
+    criminal_history = INCARC_TOTNUM_XRND,
+    work_experience = `YEXP-1500_1997`
+  ) %>%
+  mutate(
+    # Calculate age as of 2017
+    age = 2017 - KEY_BDATE_Y_1997,
+    # Calculate average parental education, handling NAs
+    parents_education = rowMeans(cbind(father_education, mother_education), na.rm = TRUE),
+    # Convert gender to binary (0 = Female, 1 = Male)
+    gender_binary = ifelse(Gender == "Male", 1, 0)
+  ) %>%
+  # Replace NAs with column means for numeric variables
+  mutate(across(where(is.numeric), ~ifelse(is.na(.), mean(., na.rm = TRUE), .))) %>%
+  # Center continuous variables
+  mutate(
+    depression_c = as.numeric(scale(depression, center = TRUE, scale = FALSE)),
+    physical_limitations_c = as.numeric(scale(physical_limitations, center = TRUE, scale = FALSE)),
+    num_children_c = as.numeric(scale(num_children, center = TRUE, scale = FALSE)),
+    education_level_c = as.numeric(scale(education_level, center = TRUE, scale = FALSE)),
+    marital_status_c = as.numeric(scale(marital_status, center = TRUE, scale = FALSE)),
+    age_c = as.numeric(scale(age, center = TRUE, scale = FALSE)),
+    parents_education_c = as.numeric(scale(parents_education, center = TRUE, scale = FALSE)),
+    criminal_history_c = as.numeric(scale(criminal_history, center = TRUE, scale = FALSE)),
+    work_experience_c = as.numeric(scale(work_experience, center = TRUE, scale = FALSE)),
+    race_c = as.numeric(scale(as.numeric(race), center = TRUE, scale = FALSE))
+  ) %>%
+  # Create interaction terms with centered variables
+  mutate(
+    gender_depression = gender_binary * depression_c,
+    gender_physical = gender_binary * physical_limitations_c,
+    gender_children = gender_binary * num_children_c,
+    gender_education = gender_binary * education_level_c,
+    gender_marital = gender_binary * marital_status_c,
+    gender_age = gender_binary * age_c,
+    gender_parent_edu = gender_binary * parents_education_c,
+    gender_criminal = gender_binary * criminal_history_c,
+    gender_work_exp = gender_binary * work_experience_c,
+    gender_race = gender_binary * race_c
+  ) %>%
+  select(Income, gender_binary, 
+         depression_c, physical_limitations_c, num_children_c, 
+         education_level_c, marital_status_c, age_c,
+         parents_education_c, criminal_history_c, work_experience_c, race_c,
+         gender_depression, gender_physical, gender_children,
+         gender_education, gender_marital, gender_age,
+         gender_parent_edu, gender_criminal, gender_work_exp, gender_race)
+
+# Remove any remaining rows with NA in Income (our dependent variable)
+model_data <- model_data[!is.na(model_data$Income), ]
+
+# Print dimensions of the dataset
+cat("Dataset dimensions after cleaning:", dim(model_data), "\n")
+
+# Split data into training and testing sets
+set.seed(123)  # for reproducibility
+train_index <- sample(1:nrow(model_data), 0.7 * nrow(model_data))
+train_data <- model_data[train_index, ]
+test_data <- model_data[-train_index, ]
+
+# Create the regression model
+income_model <- lm(Income ~ ., data = train_data)
+
+# Print model summary
+summary(income_model)
+
+# Calculate R-squared for training data
+train_r2 <- summary(income_model)$r.squared
+
+# Calculate R-squared for test data
+test_predictions <- predict(income_model, test_data)
+test_r2 <- 1 - sum((test_data$Income - test_predictions)^2) / 
+              sum((test_data$Income - mean(test_data$Income))^2)
+
+# Print model performance metrics
+cat("\nModel Performance:\n")
+cat("Training R-squared:", round(train_r2, 4), "\n")
+cat("Testing R-squared:", round(test_r2, 4), "\n")
+
+# Create prediction data frame with centered variables
+predictions_by_gender <- data.frame(
+  gender_binary = c(0, 1),
+  depression_c = rep(0, 2),
+  physical_limitations_c = rep(0, 2),
+  num_children_c = rep(0, 2),
+  education_level_c = rep(0, 2),
+  marital_status_c = rep(0, 2),
+  age_c = rep(0, 2),
+  parents_education_c = rep(0, 2),
+  criminal_history_c = rep(0, 2),
+  work_experience_c = rep(0, 2),
+  race_c = rep(0, 2)
+) %>%
+  mutate(
+    gender_depression = gender_binary * depression_c,
+    gender_physical = gender_binary * physical_limitations_c,
+    gender_children = gender_binary * num_children_c,
+    gender_education = gender_binary * education_level_c,
+    gender_marital = gender_binary * marital_status_c,
+    gender_age = gender_binary * age_c,
+    gender_parent_edu = gender_binary * parents_education_c,
+    gender_criminal = gender_binary * criminal_history_c,
+    gender_work_exp = gender_binary * work_experience_c,
+    gender_race = gender_binary * race_c
+  )
+
+# Calculate predicted incomes
+predicted_incomes <- predict(income_model, predictions_by_gender)
+
+# Calculate and print the predicted gender pay gap
+gender_gap <- predicted_incomes[2] - predicted_incomes[1]
+gender_gap_percent <- (gender_gap / predicted_incomes[1]) * 100
+
+cat("\nPredicted Gender Pay Gap:\n")
+cat("Female average income: $", round(predicted_incomes[1], 2), "\n")
+cat("Male average income: $", round(predicted_incomes[2], 2), "\n")
+cat("Absolute gap: $", round(gender_gap, 2), "\n")
+cat("Percentage gap:", round(gender_gap_percent, 1), "%\n")
+
+# Create more descriptive labels for features
+feature_labels <- c(
+    "gender_binary" = "Gender (Female = 0, Male = 1)",
+    "depression_c" = "Depression Level",
+    "physical_limitations_c" = "Physical Limitations",
+    "num_children_c" = "Number of Children",
+    "education_level_c" = "Education Level",
+    "marital_status_c" = "Marital Status",
+    "age_c" = "Age",
+    "parents_education_c" = "Parents' Education",
+    "criminal_history_c" = "Criminal History",
+    "work_experience_c" = "Work Experience",
+    "race_c" = "Race/Ethnicity",
+    "gender_depression" = "Gender × Depression",
+    "gender_physical" = "Gender × Physical Limitations",
+    "gender_children" = "Gender × Children",
+    "gender_education" = "Gender × Education",
+    "gender_marital" = "Gender × Marital Status",
+    "gender_age" = "Gender × Age",
+    "gender_parent_edu" = "Gender × Parents' Education",
+    "gender_criminal" = "Gender × Criminal History",
+    "gender_work_exp" = "Gender × Work Experience",
+    "gender_race" = "Gender × Race/Ethnicity"
+)
+
+# Update feature importance with better labels
+feature_importance <- data.frame(
+    feature = names(coef(income_model))[-1],  # exclude intercept
+    importance = abs(coef(income_model)[-1])) %>%
+  filter(!is.na(importance)) %>%  # remove any remaining NA coefficients
+  mutate(
+    # Replace feature names with descriptive labels
+    feature = factor(feature, levels = feature),
+    feature_label = factor(feature_labels[as.character(feature)], 
+                          levels = feature_labels[as.character(feature)])
+  )
+
+# Create improved visualization
+ggplot(feature_importance, aes(x = reorder(feature_label, importance), y = importance)) +
+    geom_bar(stat = "identity", fill = "steelblue") +
+    coord_flip() +
+    labs(
+        title = "Impact of Different Factors on Income",
+        subtitle = "Absolute coefficient values from regression model",
+        x = "Factor",
+        y = "Impact on Income ($)",
+        caption = "Note: All continuous variables are centered around their means"
+    ) +
+    theme_minimal() +
+    theme(
+        axis.text = element_text(size = 10),
+        axis.title = element_text(size = 11, face = "bold"),
+        plot.title = element_text(size = 13, face = "bold"),
+        plot.subtitle = element_text(size = 10, color = "gray50"),
+        plot.caption = element_text(size = 8, color = "gray50")
+    )
+
+# Create comprehensive feature importance analysis with combined effects
+feature_analysis <- data.frame(
+    feature = names(coef(income_model))[-1],  # exclude intercept
+    coefficient = coef(income_model)[-1],
+    std_error = summary(income_model)$coefficients[-1, "Std. Error"],
+    t_value = summary(income_model)$coefficients[-1, "t value"],
+    p_value = summary(income_model)$coefficients[-1, "Pr(>|t|)"]
+) %>%
+  filter(!is.na(coefficient)) %>%
+  mutate(
+    significance = case_when(
+      p_value < 0.001 ~ "***",
+      p_value < 0.01 ~ "**",
+      p_value < 0.05 ~ "*",
+      p_value < 0.1 ~ ".",
+      TRUE ~ "ns"
+    ),
+    effect_size = abs(coefficient),
+    direction = sign(coefficient),
+    # Create new combined labels
+    feature_type = case_when(
+      grepl("^gender_", feature) ~ "Interaction Effects",
+      TRUE ~ "Main Effects"
+    ),
+    # Clean up feature names with consistent format
+    feature_clean = case_when(
+      feature == "gender_binary" ~ "Gender",
+      # Main effects
+      feature == "depression_c" ~ "Depression",
+      feature == "physical_limitations_c" ~ "Physical Limitations",
+      feature == "num_children_c" ~ "Number of Children",
+      feature == "education_level_c" ~ "Education",
+      feature == "marital_status_c" ~ "Marital Status",
+      feature == "age_c" ~ "Age",
+      feature == "parents_education_c" ~ "Parents' Education",
+      feature == "criminal_history_c" ~ "Criminal History",
+      feature == "work_experience_c" ~ "Work Experience",
+      feature == "race_c" ~ "Race/Ethnicity",
+      # Interaction effects
+      feature == "gender_depression" ~ "Depression × Gender",
+      feature == "gender_physical" ~ "Physical Limitations × Gender",
+      feature == "gender_children" ~ "Children × Gender",
+      feature == "gender_education" ~ "Education × Gender",
+      feature == "gender_marital" ~ "Marital Status × Gender",
+      feature == "gender_age" ~ "Age × Gender",
+      feature == "gender_parent_edu" ~ "Parents' Education × Gender",
+      feature == "gender_criminal" ~ "Criminal History × Gender",
+      feature == "gender_work_exp" ~ "Work Experience × Gender",
+      feature == "gender_race" ~ "Race/Ethnicity × Gender",
+      TRUE ~ feature
+    )
+  )
+
+# Create color palette based on significance
+sig_colors <- c(
+    "***" = "#1a9850",  # Strong significance (dark green)
+    "**" = "#91cf60",   # Moderate significance (light green)
+    "*" = "#d9ef8b",    # Weak significance (pale green)
+    "." = "#fee08b",    # Marginal significance (pale yellow)
+    "ns" = "#d73027"    # Not significant (red)
+)
+
+# Create main visualization with facets for main effects and interactions
+p1 <- ggplot(feature_analysis, 
+       aes(x = reorder(feature_clean, effect_size), 
+           y = coefficient,
+           fill = significance)) +
+    geom_bar(stat = "identity") +
+    geom_errorbar(aes(ymin = coefficient - 1.96 * std_error,
+                      ymax = coefficient + 1.96 * std_error),
+                  width = 0.2) +
+    scale_fill_manual(values = sig_colors,
+                     labels = c("p < 0.001", "p < 0.01", "p < 0.05", 
+                              "p < 0.1", "not significant")) +
+    coord_flip() +
+    facet_wrap(~feature_type, scales = "free_y") +
+    labs(
+        title = "Impact of Different Factors on Income",
+        subtitle = "Coefficient values with 95% confidence intervals",
+        x = "Factor",
+        y = "Impact on Income ($)",
+        fill = "Significance Level",
+        caption = paste("Model R² =", round(summary(income_model)$r.squared, 3),
+                       "\nAdjusted R² =", round(summary(income_model)$adj.r.squared, 3))
+    ) +
+    theme_minimal() +
+    theme(
+        axis.text = element_text(size = 10),
+        axis.title = element_text(size = 11, face = "bold"),
+        plot.title = element_text(size = 13, face = "bold"),
+        plot.subtitle = element_text(size = 10, color = "gray50"),
+        plot.caption = element_text(size = 8, color = "gray50"),
+        legend.position = "bottom",
+        legend.title = element_text(face = "bold"),
+        strip.text = element_text(size = 11, face = "bold")
+    )
+
+# Create secondary visualization for t-values with facets
+p2 <- ggplot(feature_analysis, 
+       aes(x = reorder(feature_clean, effect_size),
+           y = t_value,
+           fill = significance)) +
+    geom_bar(stat = "identity") +
+    scale_fill_manual(values = sig_colors) +
+    coord_flip() +
+    facet_wrap(~feature_type, scales = "free_y") +
+    labs(
+        title = "Statistical Significance of Factors",
+        subtitle = "t-values (larger absolute values indicate stronger evidence)",
+        x = "Factor",
+        y = "t-value",
+        fill = "Significance Level"
+    ) +
+    theme_minimal() +
+    theme(
+        axis.text = element_text(size = 10),
+        axis.title = element_text(size = 11, face = "bold"),
+        plot.title = element_text(size = 13, face = "bold"),
+        plot.subtitle = element_text(size = 10, color = "gray50"),
+        legend.position = "none",
+        strip.text = element_text(size = 11, face = "bold")
+    )
+
+# Arrange plots side by side
+grid.arrange(p1, p2, ncol = 2, widths = c(1.2, 1))
+
+# Print detailed summary table with cleaned feature names
+summary_table <- feature_analysis %>%
+    arrange(feature_type, desc(effect_size)) %>%
+    select(feature_clean, feature_type, coefficient, std_error, t_value, p_value, significance) %>%
+    mutate(
+        coefficient = round(coefficient, 2),
+        std_error = round(std_error, 2),
+        t_value = round(t_value, 2),
+        p_value = format.pval(p_value, digits = 3)
+    )
+
+print("Detailed Factor Analysis:")
+print(kable(summary_table, 
+           col.names = c("Factor", "Effect Type", "Coefficient", "Std. Error", "t-value", "p-value", "Significance"),
+           caption = "Statistical Summary of Income Factors"))
+```
+
+### Key Findings from the Regression Analysis
+
+#### 1. Overall Model Performance
+- R² of 0.1564 (Training) and 0.1252 (Testing) indicates the model explains about 12-16% of income variation
+- While this may seem low, it's typical for social science models with many complex factors
+- The model is statistically significant (F-statistic p-value < 2.2e-16)
+
+#### 2. Base Gender Gap
+- Baseline gender gap is $11,432.02 (coefficient for gender_binary)
+- This represents a 25.8% gap between male and female incomes
+- Highly significant (p < 2e-16)
+
+#### 3. Most Significant Interaction Effects (Gender × Factor)
+
+**Strong Positive Interactions (Increasing Gender Gap):**
+
+- Gender × Children (+$3,156.27, p < 0.001)
+  - Having children increases income for men but decreases it for women
+  - Suggests traditional gender roles impact career progression
+
+- Gender × Marital Status (+$4,201.08, p < 0.001)
+  - Marriage has a more positive effect on men's income
+  - Could reflect traditional household dynamics
+
+- Gender × Education (+$2,879.21, p < 0.001)
+  - Education yields higher returns for men
+  - Indicates potential discrimination in how educational credentials are valued
+
+- Gender × Age (+$1,411.03, p < 0.01)
+  - Age/experience benefits men's income more
+  - Suggests career advancement disparities
+
+- Gender × Race (+$1,291.89, p < 0.05)
+  - Indicates intersectional effects between gender and race
+  - Shows complexity of demographic factors in income determination
+
+#### 4. Main Effects (Independent of Gender)
+
+**Significant Positive Effects:**
+
+- Education Level (+$6,259.34, p < 0.001)
+  - Strong positive impact on income regardless of gender
+  - Highlights importance of education for all workers
+
+- Race (+$827.39, p < 0.05)
+  - Indicates some racial income disparities
+  - Effect is amplified by gender interaction
+
+**Significant Negative Effects:**
+
+- Number of Children (-$1,425.76, p < 0.05)
+  - Overall negative effect on income
+  - Effect is moderated by gender interaction
+
+#### 5. Non-Significant Factors
+Several factors showed no significant direct effect but had significant gender interactions:
+- Depression
+- Physical limitations
+- Work experience
+- Parents' education
+- Criminal history
