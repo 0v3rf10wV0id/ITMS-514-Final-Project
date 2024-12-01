@@ -1,15 +1,25 @@
----
-title: "Final Project Starter Script"
+--- 
+title: "Gender Income Gap Analysis"
 author: "Group 7"
 date: "`r Sys.Date()`"
 output:
   pdf_document:
-    latex_engine: xelatex
+    toc: true
+    toc_depth: '3'
   html_document:
     toc: true
     toc_float: true
     keep_md: true
+    toc_depth: 3
+    theme: bootstrap
 ---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(gridExtra)
+library(knitr)
+```
 
 #### Package loading
 
@@ -20,7 +30,6 @@ library(ggplot2)
 library(dplyr)
 library(gridExtra)
 ```
-
 
 #### Importing the data
 
@@ -293,26 +302,9 @@ gender_summary <- nlsy %>%
 print("Income Summary Statistics by Gender:")
 print(gender_summary)
 
-# Arrange plots in a grid
-library(gridExtra)
-grid.arrange(p1, p2, p3, ncol = 2, nrow = 2)
-
-# Statistical test
-t_test_result <- t.test(Income ~ Gender, data = nlsy, var.equal = FALSE)
-print("\nStatistical Test Results:")
-print(t_test_result)
-
-# Calculate and print gender pay gap
-pay_gap <- nlsy %>%
-  group_by(Gender) %>%
-  summarise(mean_income = mean(Income, na.rm = TRUE)) %>%
-  spread(Gender, mean_income) %>%
-  mutate(gap_percent = (Male - Female) / Male * 100)
-
-print("\nGender Pay Gap:")
-print(paste0("Women earn ", round(pay_gap$gap_percent, 1), 
-            "% less than men on average in this sample"))
-
+# Display plots separately instead of grid.arrange
+print(p1)
+print(p2)
 ```
 
 ### Analysis of Parents' Education Impact on Gender Income Gap
@@ -1807,7 +1799,6 @@ Given these extremely significant findings, we should:
   * Management training on mental health support
 
 ---
-
 ### Analysis of Organizational Skills Impact on Gender Income Gap
 
 We'll analyze how organizational skills (using YSAQ-282Q_2002) relate to income differences between genders, following the same correlation-based approach used in our previous analyses.
@@ -2363,9 +2354,8 @@ print(kable(summary_table,
 
 #### 5. Non-Significant Factors
 Several factors showed no significant direct effect but had significant gender interactions:
-
 - Depression
 - Physical limitations
 - Work experience
 - Parents' education
-- Criminal history
+- Criminal history 

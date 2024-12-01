@@ -1,32 +1,69 @@
 ---
 title: "Final Project Starter Script"
 author: "Group 7"
-date: "`r Sys.Date()`"
+date: "2024-11-30"
 output:
-  pdf_document:
-    latex_engine: xelatex
   html_document:
     toc: true
     toc_float: true
     keep_md: true
+  pdf_document:
+    latex_engine: xelatex
 ---
 
 #### Package loading
 
-```{r}
+
+``` r
 library(tidyverse)
+```
+
+```
+## ── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
+## ✔ dplyr     1.1.4     ✔ readr     2.1.5
+## ✔ forcats   1.0.0     ✔ stringr   1.5.1
+## ✔ ggplot2   3.5.1     ✔ tibble    3.2.1
+## ✔ lubridate 1.9.3     ✔ tidyr     1.3.1
+## ✔ purrr     1.0.2     
+## ── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+## ✖ dplyr::filter() masks stats::filter()
+## ✖ dplyr::lag()    masks stats::lag()
+## ℹ Use the conflicted package (<http://conflicted.r-lib.org/>) to force all conflicts to become errors
+```
+
+``` r
 library(knitr)
 library(ggplot2)
 library(dplyr)
 library(gridExtra)
 ```
 
+```
+## 
+## Attaching package: 'gridExtra'
+## 
+## The following object is masked from 'package:dplyr':
+## 
+##     combine
+```
+
 
 #### Importing the data
 
-```{r}
+
+``` r
 # Import starting data
 nlsy <- read_csv("nlsy97.csv")
+```
+
+```
+## Rows: 8984 Columns: 95
+## ── Column specification ────────────────────────────────────────────────────────
+## Delimiter: ","
+## dbl (95): B0004600, E8043100, E8043200, E8043400, R0000100, R0069400, R00700...
+## 
+## ℹ Use `spec()` to retrieve the full column specification for this data.
+## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.
 ```
 
 #### Variables present in the base data set
@@ -36,7 +73,8 @@ To learn more about the data, you can have a look at the variable codebook file 
 
 Here's how to rename all the variables to the Question Name abbreviation.  **You will want to change the names to be even more descriptive**, but this is a start.
 
-```{r}
+
+``` r
 # Change column names to question name abbreviations (you will want to change these further)
 colnames(nlsy) <- c("PSTRAN_GPA.01_PSTR",
     "INCARC_TOTNUM_XRND",
@@ -178,10 +216,25 @@ This description says that the numbers -1, -2, -4 and -5 all have a special mean
 
 In the previous chunk of code we have appropriately renamed the variables corresponding to `sex`, `race` and `income` (as reported on the 2017 survey).  Let's have a quick look at what we're working with.
 
-```{r}
-table(nlsy$sex)
 
+``` r
+table(nlsy$sex)
+```
+
+```
+## 
+##    1    2 
+## 4599 4385
+```
+
+``` r
 table(nlsy$race)
+```
+
+```
+## 
+##    1    2    3    4 
+## 2335 1901   83 4665
 ```
 
 The data codebook tells us that the coding for sex is `Male = 1`, `Female = 2`.  For the race/ethnicity variable, the coding is:
@@ -195,26 +248,58 @@ The data codebook tells us that the coding for sex is `Male = 1`, `Female = 2`. 
 
 You'll want to do some data manipulations to change away from the numeric codings to more interpretable labels. 
 
-```{r}
-summary(nlsy$income)
 
+``` r
+summary(nlsy$income)
+```
+
+```
+##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
+##       0   25000   40000   49477   62000  235884    3893
+```
+
+``` r
 # Histogram
 qplot(nlsy$income)
 ```
 
+```
+## Warning: `qplot()` was deprecated in ggplot2 3.4.0.
+## This warning is displayed once every 8 hours.
+## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
+## generated.
+```
+
+```
+## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
+```
+
+```
+## Warning: Removed 3893 rows containing non-finite outside the scale range
+## (`stat_bin()`).
+```
+
+![](final-project-starter-script_files/figure-html/unnamed-chunk-5-1.png)<!-- -->
+
 The income distributing is right-skewed like one might expect.  However, as indicated in the question description, the income variable is *topcoded* at the 2% level.  More precisely,
 
-```{r}
+
+``` r
 n.topcoded <- with(nlsy, sum(income == max(income, na.rm = TRUE), na.rm = TRUE))
 n.topcoded
 ```
 
-`r n.topcoded` of the incomes are topcoded to the maximum value of `r max(nlsy$income, na.rm = TRUE)`, which is the average value of the top `r n.topcoded` earners.    You will want to think about how  to deal with this in your analysis.
+```
+## [1] 121
+```
+
+121 of the incomes are topcoded to the maximum value of 2.35884\times 10^{5}, which is the average value of the top 121 earners.    You will want to think about how  to deal with this in your analysis.
 
 ### Significant Difference in Income between Men and Women
 
 ###########################################################################################
-```{r}
+
+``` r
 # Rename and clean data
 nlsy <- nlsy %>%
   rename(
@@ -243,7 +328,17 @@ p1 <- ggplot(nlsy, aes(x = Income, fill = Gender)) +
     y = "Density"
   ) +
   theme_minimal()
+```
 
+```
+## Warning: Using `size` aesthetic for lines was deprecated in ggplot2 3.4.0.
+## ℹ Please use `linewidth` instead.
+## This warning is displayed once every 8 hours.
+## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
+## generated.
+```
+
+``` r
 # 2. Box plot with violin plot overlay
 p2 <- ggplot(nlsy, aes(x = Gender, y = Income, fill = Gender)) +
   geom_violin(alpha = 0.5) +
@@ -291,17 +386,76 @@ gender_summary <- nlsy %>%
   mutate(across(Mean:Q3, ~scales::dollar(.x, accuracy = 1)))
 
 print("Income Summary Statistics by Gender:")
-print(gender_summary)
+```
 
+```
+## [1] "Income Summary Statistics by Gender:"
+```
+
+``` r
+print(gender_summary)
+```
+
+```
+## # A tibble: 2 × 7
+##   Gender Mean    Median  SD      Q1      Q3          n
+##   <fct>  <chr>   <chr>   <chr>   <chr>   <chr>   <int>
+## 1 Male   $57,203 $47,000 $44,712 $30,000 $70,000  2621
+## 2 Female $41,279 $35,000 $34,047 $20,000 $52,000  2470
+```
+
+``` r
 # Arrange plots in a grid
 library(gridExtra)
 grid.arrange(p1, p2, p3, ncol = 2, nrow = 2)
+```
 
+```
+## Warning: Removed 4014 rows containing non-finite outside the scale range
+## (`stat_density()`).
+```
+
+```
+## Warning: Removed 3893 rows containing non-finite outside the scale range
+## (`stat_ydensity()`).
+```
+
+```
+## Warning: Removed 3893 rows containing non-finite outside the scale range
+## (`stat_boxplot()`).
+```
+
+![](final-project-starter-script_files/figure-html/unnamed-chunk-7-1.png)<!-- -->
+
+``` r
 # Statistical test
 t_test_result <- t.test(Income ~ Gender, data = nlsy, var.equal = FALSE)
 print("\nStatistical Test Results:")
-print(t_test_result)
+```
 
+```
+## [1] "\nStatistical Test Results:"
+```
+
+``` r
+print(t_test_result)
+```
+
+```
+## 
+## 	Welch Two Sample t-test
+## 
+## data:  Income by Gender
+## t = 14.346, df = 4876.8, p-value < 2.2e-16
+## alternative hypothesis: true difference in means between group Male and group Female is not equal to 0
+## 95 percent confidence interval:
+##  13747.84 18099.96
+## sample estimates:
+##   mean in group Male mean in group Female 
+##             57202.82             41278.92
+```
+
+``` r
 # Calculate and print gender pay gap
 pay_gap <- nlsy %>%
   group_by(Gender) %>%
@@ -310,9 +464,19 @@ pay_gap <- nlsy %>%
   mutate(gap_percent = (Male - Female) / Male * 100)
 
 print("\nGender Pay Gap:")
+```
+
+```
+## [1] "\nGender Pay Gap:"
+```
+
+``` r
 print(paste0("Women earn ", round(pay_gap$gap_percent, 1), 
             "% less than men on average in this sample"))
+```
 
+```
+## [1] "Women earn 27.8% less than men on average in this sample"
 ```
 
 ### Analysis of Parents' Education Impact on Gender Income Gap
@@ -326,7 +490,8 @@ The first factor we'll analyze is parents' education and its relationship with i
 
 #### Analysis
 
-```{r parents_education_analysis}
+
+``` r
 # Clean and prepare parents' education data
 nlsy_parents_ed <- nlsy %>%
   rename(
@@ -377,16 +542,84 @@ p_value <- 2 * (1 - pnorm(abs(z_stat)))
 
 # Print results
 print("Hypothesis Test Results:")
-print("H0: The correlation between parental education and income is equal for both genders")
-print("H1: The correlation between parental education and income differs by gender")
-print(paste("Z-statistic:", round(z_stat, 3)))
-print(paste("p-value:", round(p_value, 4)))
-print("\nCorrelations by Gender:")
-print(correlations)
+```
 
+```
+## [1] "Hypothesis Test Results:"
+```
+
+``` r
+print("H0: The correlation between parental education and income is equal for both genders")
+```
+
+```
+## [1] "H0: The correlation between parental education and income is equal for both genders"
+```
+
+``` r
+print("H1: The correlation between parental education and income differs by gender")
+```
+
+```
+## [1] "H1: The correlation between parental education and income differs by gender"
+```
+
+``` r
+print(paste("Z-statistic:", round(z_stat, 3)))
+```
+
+```
+## [1] "Z-statistic: -3.612"
+```
+
+``` r
+print(paste("p-value:", round(p_value, 4)))
+```
+
+```
+## [1] "p-value: 3e-04"
+```
+
+``` r
+print("\nCorrelations by Gender:")
+```
+
+```
+## [1] "\nCorrelations by Gender:"
+```
+
+``` r
+print(correlations)
+```
+
+```
+## # A tibble: 2 × 3
+##   Gender correlation     n
+##   <fct>        <dbl> <int>
+## 1 Male         0.154  4599
+## 2 Female       0.227  4385
+```
+
+``` r
 # Display visualization
 p1
 ```
+
+```
+## `geom_smooth()` using formula = 'y ~ x'
+```
+
+```
+## Warning: Removed 5044 rows containing non-finite outside the scale range
+## (`stat_smooth()`).
+```
+
+```
+## Warning: Removed 5044 rows containing missing values or values outside the scale range
+## (`geom_point()`).
+```
+
+![](final-project-starter-script_files/figure-html/parents_education_analysis-1.png)<!-- -->
 
 #### Results Interpretation
 
@@ -434,7 +667,8 @@ We'll analyze how drug use (from variable YSAQ-372CC_2011) relates to income dif
 
 #### Analysis
 
-```{r drug_use_analysis}
+
+``` r
 # Clean and prepare drug use data
 nlsy_drug <- nlsy %>%
   rename(
@@ -480,16 +714,84 @@ p_value <- 2 * (1 - pnorm(abs(z_stat)))
 
 # Print results
 print("Hypothesis Test Results:")
-print("H0: The correlation between drug use and income is equal for both genders")
-print("H1: The correlation between drug use and income differs by gender")
-print(paste("Z-statistic:", round(z_stat, 3)))
-print(paste("p-value:", round(p_value, 4)))
-print("\nCorrelations by Gender:")
-print(correlations)
+```
 
+```
+## [1] "Hypothesis Test Results:"
+```
+
+``` r
+print("H0: The correlation between drug use and income is equal for both genders")
+```
+
+```
+## [1] "H0: The correlation between drug use and income is equal for both genders"
+```
+
+``` r
+print("H1: The correlation between drug use and income differs by gender")
+```
+
+```
+## [1] "H1: The correlation between drug use and income differs by gender"
+```
+
+``` r
+print(paste("Z-statistic:", round(z_stat, 3)))
+```
+
+```
+## [1] "Z-statistic: 0.367"
+```
+
+``` r
+print(paste("p-value:", round(p_value, 4)))
+```
+
+```
+## [1] "p-value: 0.7134"
+```
+
+``` r
+print("\nCorrelations by Gender:")
+```
+
+```
+## [1] "\nCorrelations by Gender:"
+```
+
+``` r
+print(correlations)
+```
+
+```
+## # A tibble: 2 × 3
+##   Gender correlation     n
+##   <fct>        <dbl> <int>
+## 1 Male      -0.00705  4599
+## 2 Female    -0.0148   4385
+```
+
+``` r
 # Display visualization
 p1
 ```
+
+```
+## `geom_smooth()` using formula = 'y ~ x'
+```
+
+```
+## Warning: Removed 4341 rows containing non-finite outside the scale range
+## (`stat_smooth()`).
+```
+
+```
+## Warning: Removed 4341 rows containing missing values or values outside the scale range
+## (`geom_point()`).
+```
+
+![](final-project-starter-script_files/figure-html/drug_use_analysis-1.png)<!-- -->
 
 #### Results Interpretation
 
@@ -534,7 +836,8 @@ We'll analyze how education level (from variable CV_HIGHEST_DEGREE_1112_2011) re
 
 #### Analysis
 
-```{r education_analysis}
+
+``` r
 # Clean and prepare education data
 nlsy_edu <- nlsy %>%
   rename(
@@ -580,16 +883,84 @@ p_value <- 2 * (1 - pnorm(abs(z_stat)))
 
 # Print results
 print("Hypothesis Test Results:")
-print("H0: The correlation between education level and income is equal for both genders")
-print("H1: The correlation between education level and income differs by gender")
-print(paste("Z-statistic:", round(z_stat, 3)))
-print(paste("p-value:", round(p_value, 4)))
-print("\nCorrelations by Gender:")
-print(correlations)
+```
 
+```
+## [1] "Hypothesis Test Results:"
+```
+
+``` r
+print("H0: The correlation between education level and income is equal for both genders")
+```
+
+```
+## [1] "H0: The correlation between education level and income is equal for both genders"
+```
+
+``` r
+print("H1: The correlation between education level and income differs by gender")
+```
+
+```
+## [1] "H1: The correlation between education level and income differs by gender"
+```
+
+``` r
+print(paste("Z-statistic:", round(z_stat, 3)))
+```
+
+```
+## [1] "Z-statistic: -4.303"
+```
+
+``` r
+print(paste("p-value:", round(p_value, 4)))
+```
+
+```
+## [1] "p-value: 0"
+```
+
+``` r
+print("\nCorrelations by Gender:")
+```
+
+```
+## [1] "\nCorrelations by Gender:"
+```
+
+``` r
+print(correlations)
+```
+
+```
+## # A tibble: 2 × 3
+##   Gender correlation     n
+##   <fct>        <dbl> <int>
+## 1 Male         0.421  4599
+## 2 Female       0.492  4385
+```
+
+``` r
 # Display visualization
 p1
 ```
+
+```
+## `geom_smooth()` using formula = 'y ~ x'
+```
+
+```
+## Warning: Removed 4316 rows containing non-finite outside the scale range
+## (`stat_smooth()`).
+```
+
+```
+## Warning: Removed 4316 rows containing missing values or values outside the scale range
+## (`geom_point()`).
+```
+
+![](final-project-starter-script_files/figure-html/education_analysis-1.png)<!-- -->
 
 #### Results Interpretation
 
@@ -636,7 +1007,8 @@ We'll analyze how marital status (from variable CV_MARSTAT_COLLAPSED_2017) relat
 
 #### Analysis
 
-```{r marital_status_analysis}
+
+``` r
 # Clean and prepare marital status data
 nlsy_marital <- nlsy %>%
   rename(
@@ -682,16 +1054,84 @@ p_value <- 2 * (1 - pnorm(abs(z_stat)))
 
 # Print results
 print("Hypothesis Test Results:")
-print("H0: The correlation between marital status and income is equal for both genders")
-print("H1: The correlation between marital status and income differs by gender")
-print(paste("Z-statistic:", round(z_stat, 3)))
-print(paste("p-value:", round(p_value, 4)))
-print("\nCorrelations by Gender:")
-print(correlations)
+```
 
+```
+## [1] "Hypothesis Test Results:"
+```
+
+``` r
+print("H0: The correlation between marital status and income is equal for both genders")
+```
+
+```
+## [1] "H0: The correlation between marital status and income is equal for both genders"
+```
+
+``` r
+print("H1: The correlation between marital status and income differs by gender")
+```
+
+```
+## [1] "H1: The correlation between marital status and income differs by gender"
+```
+
+``` r
+print(paste("Z-statistic:", round(z_stat, 3)))
+```
+
+```
+## [1] "Z-statistic: 4.392"
+```
+
+``` r
+print(paste("p-value:", round(p_value, 4)))
+```
+
+```
+## [1] "p-value: 0"
+```
+
+``` r
+print("\nCorrelations by Gender:")
+```
+
+```
+## [1] "\nCorrelations by Gender:"
+```
+
+``` r
+print(correlations)
+```
+
+```
+## # A tibble: 2 × 3
+##   Gender correlation     n
+##   <fct>        <dbl> <int>
+## 1 Male       0.0902   4599
+## 2 Female    -0.00229  4385
+```
+
+``` r
 # Display visualization
 p1
 ```
+
+```
+## `geom_smooth()` using formula = 'y ~ x'
+```
+
+```
+## Warning: Removed 4045 rows containing non-finite outside the scale range
+## (`stat_smooth()`).
+```
+
+```
+## Warning: Removed 4045 rows containing missing values or values outside the scale range
+## (`geom_point()`).
+```
+
+![](final-project-starter-script_files/figure-html/marital_status_analysis-1.png)<!-- -->
 
 #### Results Interpretation
 
@@ -738,7 +1178,8 @@ We'll analyze how criminal history (using INCARC_TOTNUM_XRND - total number of i
 
 #### Analysis
 
-```{r criminal_history_analysis}
+
+``` r
 # Clean and prepare criminal history data
 nlsy_criminal <- nlsy %>%
   rename(
@@ -784,16 +1225,89 @@ p_value <- 2 * (1 - pnorm(abs(z_stat)))
 
 # Print results
 print("Hypothesis Test Results:")
-print("H0: The correlation between criminal history and income is equal for both genders")
-print("H1: The correlation between criminal history and income differs by gender")
-print(paste("Z-statistic:", round(z_stat, 3)))
-print(paste("p-value:", round(p_value, 4)))
-print("\nCorrelations by Gender:")
-print(correlations)
+```
 
+```
+## [1] "Hypothesis Test Results:"
+```
+
+``` r
+print("H0: The correlation between criminal history and income is equal for both genders")
+```
+
+```
+## [1] "H0: The correlation between criminal history and income is equal for both genders"
+```
+
+``` r
+print("H1: The correlation between criminal history and income differs by gender")
+```
+
+```
+## [1] "H1: The correlation between criminal history and income differs by gender"
+```
+
+``` r
+print(paste("Z-statistic:", round(z_stat, 3)))
+```
+
+```
+## [1] "Z-statistic: -3.015"
+```
+
+``` r
+print(paste("p-value:", round(p_value, 4)))
+```
+
+```
+## [1] "p-value: 0.0026"
+```
+
+``` r
+print("\nCorrelations by Gender:")
+```
+
+```
+## [1] "\nCorrelations by Gender:"
+```
+
+``` r
+print(correlations)
+```
+
+```
+## # A tibble: 2 × 3
+##   Gender correlation     n
+##   <fct>        <dbl> <int>
+## 1 Male       -0.143   4599
+## 2 Female     -0.0805  4385
+```
+
+``` r
 # Display visualization
 p1
 ```
+
+```
+## `geom_smooth()` using formula = 'y ~ x'
+```
+
+```
+## Warning: Removed 4020 rows containing non-finite outside the scale range
+## (`stat_smooth()`).
+```
+
+```
+## Warning: Removed 4020 rows containing missing values or values outside the scale range
+## (`geom_point()`).
+```
+
+```
+## Warning: Removed 42 rows containing missing values or values outside the scale range
+## (`geom_smooth()`).
+```
+
+![](final-project-starter-script_files/figure-html/criminal_history_analysis-1.png)<!-- -->
 
 #### Results Interpretation
 
@@ -840,7 +1354,8 @@ We'll analyze how profession/industry (using YEMP_INDCODE-2002.01_2017) relates 
 
 #### Analysis
 
-```{r profession_analysis}
+
+``` r
 # Clean and prepare profession data
 nlsy_prof <- nlsy %>%
   rename(
@@ -886,16 +1401,84 @@ p_value <- 2 * (1 - pnorm(abs(z_stat)))
 
 # Print results
 print("Hypothesis Test Results:")
-print("H0: The correlation between profession/industry and income is equal for both genders")
-print("H1: The correlation between profession/industry and income differs by gender")
-print(paste("Z-statistic:", round(z_stat, 3)))
-print(paste("p-value:", round(p_value, 4)))
-print("\nCorrelations by Gender:")
-print(correlations)
+```
 
+```
+## [1] "Hypothesis Test Results:"
+```
+
+``` r
+print("H0: The correlation between profession/industry and income is equal for both genders")
+```
+
+```
+## [1] "H0: The correlation between profession/industry and income is equal for both genders"
+```
+
+``` r
+print("H1: The correlation between profession/industry and income differs by gender")
+```
+
+```
+## [1] "H1: The correlation between profession/industry and income differs by gender"
+```
+
+``` r
+print(paste("Z-statistic:", round(z_stat, 3)))
+```
+
+```
+## [1] "Z-statistic: 1.934"
+```
+
+``` r
+print(paste("p-value:", round(p_value, 4)))
+```
+
+```
+## [1] "p-value: 0.0531"
+```
+
+``` r
+print("\nCorrelations by Gender:")
+```
+
+```
+## [1] "\nCorrelations by Gender:"
+```
+
+``` r
+print(correlations)
+```
+
+```
+## # A tibble: 2 × 3
+##   Gender correlation     n
+##   <fct>        <dbl> <int>
+## 1 Male        0.0598  4599
+## 2 Female      0.0190  4385
+```
+
+``` r
 # Display visualization
 p1
 ```
+
+```
+## `geom_smooth()` using formula = 'y ~ x'
+```
+
+```
+## Warning: Removed 4173 rows containing non-finite outside the scale range
+## (`stat_smooth()`).
+```
+
+```
+## Warning: Removed 4173 rows containing missing values or values outside the scale range
+## (`geom_point()`).
+```
+
+![](final-project-starter-script_files/figure-html/profession_analysis-1.png)<!-- -->
 
 #### Results Interpretation
 
@@ -942,7 +1525,8 @@ We'll analyze how work experience (using YEXP-1500_1997) relates to income diffe
 
 #### Analysis
 
-```{r work_experience_analysis}
+
+``` r
 # Clean and prepare work experience data
 nlsy_exp <- nlsy %>%
   rename(
@@ -988,16 +1572,84 @@ p_value <- 2 * (1 - pnorm(abs(z_stat)))
 
 # Print results
 print("Hypothesis Test Results:")
-print("H0: The correlation between work experience and income is equal for both genders")
-print("H1: The correlation between work experience and income differs by gender")
-print(paste("Z-statistic:", round(z_stat, 3)))
-print(paste("p-value:", round(p_value, 4)))
-print("\nCorrelations by Gender:")
-print(correlations)
+```
 
+```
+## [1] "Hypothesis Test Results:"
+```
+
+``` r
+print("H0: The correlation between work experience and income is equal for both genders")
+```
+
+```
+## [1] "H0: The correlation between work experience and income is equal for both genders"
+```
+
+``` r
+print("H1: The correlation between work experience and income differs by gender")
+```
+
+```
+## [1] "H1: The correlation between work experience and income differs by gender"
+```
+
+``` r
+print(paste("Z-statistic:", round(z_stat, 3)))
+```
+
+```
+## [1] "Z-statistic: 2.161"
+```
+
+``` r
+print(paste("p-value:", round(p_value, 4)))
+```
+
+```
+## [1] "p-value: 0.0307"
+```
+
+``` r
+print("\nCorrelations by Gender:")
+```
+
+```
+## [1] "\nCorrelations by Gender:"
+```
+
+``` r
+print(correlations)
+```
+
+```
+## # A tibble: 2 × 3
+##   Gender correlation     n
+##   <fct>        <dbl> <int>
+## 1 Male         0.147  4599
+## 2 Female       0.102  4385
+```
+
+``` r
 # Display visualization
 p1
 ```
+
+```
+## `geom_smooth()` using formula = 'y ~ x'
+```
+
+```
+## Warning: Removed 7093 rows containing non-finite outside the scale range
+## (`stat_smooth()`).
+```
+
+```
+## Warning: Removed 7093 rows containing missing values or values outside the scale range
+## (`geom_point()`).
+```
+
+![](final-project-starter-script_files/figure-html/work_experience_analysis-1.png)<!-- -->
 
 #### Results Interpretation
 
@@ -1044,7 +1696,8 @@ We'll analyze how region (using CV_URBAN-RURAL_AGE_12_1997) relates to income di
 
 #### Analysis
 
-```{r region_analysis}
+
+``` r
 # Clean and prepare region data
 nlsy_region <- nlsy %>%
   rename(
@@ -1090,16 +1743,84 @@ p_value <- 2 * (1 - pnorm(abs(z_stat)))
 
 # Print results
 print("Hypothesis Test Results:")
-print("H0: The correlation between urban/rural location and income is equal for both genders")
-print("H1: The correlation between urban/rural location and income differs by gender")
-print(paste("Z-statistic:", round(z_stat, 3)))
-print(paste("p-value:", round(p_value, 4)))
-print("\nCorrelations by Gender:")
-print(correlations)
+```
 
+```
+## [1] "Hypothesis Test Results:"
+```
+
+``` r
+print("H0: The correlation between urban/rural location and income is equal for both genders")
+```
+
+```
+## [1] "H0: The correlation between urban/rural location and income is equal for both genders"
+```
+
+``` r
+print("H1: The correlation between urban/rural location and income differs by gender")
+```
+
+```
+## [1] "H1: The correlation between urban/rural location and income differs by gender"
+```
+
+``` r
+print(paste("Z-statistic:", round(z_stat, 3)))
+```
+
+```
+## [1] "Z-statistic: 1.8"
+```
+
+``` r
+print(paste("p-value:", round(p_value, 4)))
+```
+
+```
+## [1] "p-value: 0.0719"
+```
+
+``` r
+print("\nCorrelations by Gender:")
+```
+
+```
+## [1] "\nCorrelations by Gender:"
+```
+
+``` r
+print(correlations)
+```
+
+```
+## # A tibble: 2 × 3
+##   Gender correlation     n
+##   <fct>        <dbl> <int>
+## 1 Male        0.0238  4599
+## 2 Female     -0.0142  4385
+```
+
+``` r
 # Display visualization
 p1
 ```
+
+```
+## `geom_smooth()` using formula = 'y ~ x'
+```
+
+```
+## Warning: Removed 5161 rows containing non-finite outside the scale range
+## (`stat_smooth()`).
+```
+
+```
+## Warning: Removed 5161 rows containing missing values or values outside the scale range
+## (`geom_point()`).
+```
+
+![](final-project-starter-script_files/figure-html/region_analysis-1.png)<!-- -->
 
 #### Results Interpretation
 
@@ -1147,7 +1868,8 @@ We'll analyze how the number of children (using CV_BIO_CHILD_HH_2015) relates to
 
 #### Analysis
 
-```{r children_analysis}
+
+``` r
 # Clean and prepare children data
 nlsy_children <- nlsy %>%
   rename(
@@ -1193,16 +1915,84 @@ p_value <- 2 * (1 - pnorm(abs(z_stat)))
 
 # Print results
 print("Hypothesis Test Results:")
-print("H0: The correlation between number of children and income is equal for both genders")
-print("H1: The correlation between number of children and income differs by gender")
-print(paste("Z-statistic:", round(z_stat, 3)))
-print(paste("p-value:", round(p_value, 4)))
-print("\nCorrelations by Gender:")
-print(correlations)
+```
 
+```
+## [1] "Hypothesis Test Results:"
+```
+
+``` r
+print("H0: The correlation between number of children and income is equal for both genders")
+```
+
+```
+## [1] "H0: The correlation between number of children and income is equal for both genders"
+```
+
+``` r
+print("H1: The correlation between number of children and income differs by gender")
+```
+
+```
+## [1] "H1: The correlation between number of children and income differs by gender"
+```
+
+``` r
+print(paste("Z-statistic:", round(z_stat, 3)))
+```
+
+```
+## [1] "Z-statistic: 15.92"
+```
+
+``` r
+print(paste("p-value:", round(p_value, 4)))
+```
+
+```
+## [1] "p-value: 0"
+```
+
+``` r
+print("\nCorrelations by Gender:")
+```
+
+```
+## [1] "\nCorrelations by Gender:"
+```
+
+``` r
+print(correlations)
+```
+
+```
+## # A tibble: 2 × 3
+##   Gender correlation     n
+##   <fct>        <dbl> <int>
+## 1 Male         0.175  4599
+## 2 Female      -0.158  4385
+```
+
+``` r
 # Display visualization
 p1
 ```
+
+```
+## `geom_smooth()` using formula = 'y ~ x'
+```
+
+```
+## Warning: Removed 5882 rows containing non-finite outside the scale range
+## (`stat_smooth()`).
+```
+
+```
+## Warning: Removed 5882 rows containing missing values or values outside the scale range
+## (`geom_point()`).
+```
+
+![](final-project-starter-script_files/figure-html/children_analysis-1.png)<!-- -->
 
 #### Results Interpretation
 
@@ -1257,7 +2047,8 @@ We'll analyze how age relates to income differences between genders, following t
 
 #### Analysis
 
-```{r age_analysis}
+
+``` r
 # Clean and prepare age data
 nlsy_age <- nlsy %>%
   rename(
@@ -1306,16 +2097,84 @@ p_value <- 2 * (1 - pnorm(abs(z_stat)))
 
 # Print results
 print("Hypothesis Test Results:")
-print("H0: The correlation between age and income is equal for both genders")
-print("H1: The correlation between age and income differs by gender")
-print(paste("Z-statistic:", round(z_stat, 3)))
-print(paste("p-value:", round(p_value, 4)))
-print("\nCorrelations by Gender:")
-print(correlations)
+```
 
+```
+## [1] "Hypothesis Test Results:"
+```
+
+``` r
+print("H0: The correlation between age and income is equal for both genders")
+```
+
+```
+## [1] "H0: The correlation between age and income is equal for both genders"
+```
+
+``` r
+print("H1: The correlation between age and income differs by gender")
+```
+
+```
+## [1] "H1: The correlation between age and income differs by gender"
+```
+
+``` r
+print(paste("Z-statistic:", round(z_stat, 3)))
+```
+
+```
+## [1] "Z-statistic: 4.454"
+```
+
+``` r
+print(paste("p-value:", round(p_value, 4)))
+```
+
+```
+## [1] "p-value: 0"
+```
+
+``` r
+print("\nCorrelations by Gender:")
+```
+
+```
+## [1] "\nCorrelations by Gender:"
+```
+
+``` r
+print(correlations)
+```
+
+```
+## # A tibble: 2 × 3
+##   Gender correlation     n
+##   <fct>        <dbl> <int>
+## 1 Male        0.0802  4599
+## 2 Female     -0.0137  4385
+```
+
+``` r
 # Display visualization
 p1
 ```
+
+```
+## `geom_smooth()` using formula = 'y ~ x'
+```
+
+```
+## Warning: Removed 4014 rows containing non-finite outside the scale range
+## (`stat_smooth()`).
+```
+
+```
+## Warning: Removed 4014 rows containing missing values or values outside the scale range
+## (`geom_point()`).
+```
+
+![](final-project-starter-script_files/figure-html/age_analysis-1.png)<!-- -->
 
 #### Results Interpretation
 
@@ -1370,7 +2229,8 @@ We'll analyze how ethnicity (using the race variable) relates to income differen
 
 #### Analysis
 
-```{r ethnicity_analysis}
+
+``` r
 # Clean and prepare ethnicity data
 nlsy_ethnicity <- nlsy %>%
   select(Gender, Income, race) %>%
@@ -1419,16 +2279,84 @@ p_value <- 2 * (1 - pnorm(abs(z_stat)))
 
 # Print results
 print("Hypothesis Test Results:")
-print("H0: The correlation between ethnicity and income is equal for both genders")
-print("H1: The correlation between ethnicity and income differs by gender")
-print(paste("Z-statistic:", round(z_stat, 3)))
-print(paste("p-value:", round(p_value, 4)))
-print("\nCorrelations by Gender:")
-print(correlations)
+```
 
+```
+## [1] "Hypothesis Test Results:"
+```
+
+``` r
+print("H0: The correlation between ethnicity and income is equal for both genders")
+```
+
+```
+## [1] "H0: The correlation between ethnicity and income is equal for both genders"
+```
+
+``` r
+print("H1: The correlation between ethnicity and income differs by gender")
+```
+
+```
+## [1] "H1: The correlation between ethnicity and income differs by gender"
+```
+
+``` r
+print(paste("Z-statistic:", round(z_stat, 3)))
+```
+
+```
+## [1] "Z-statistic: 2.58"
+```
+
+``` r
+print(paste("p-value:", round(p_value, 4)))
+```
+
+```
+## [1] "p-value: 0.0099"
+```
+
+``` r
+print("\nCorrelations by Gender:")
+```
+
+```
+## [1] "\nCorrelations by Gender:"
+```
+
+``` r
+print(correlations)
+```
+
+```
+## # A tibble: 2 × 3
+##   Gender correlation     n
+##   <fct>        <dbl> <int>
+## 1 Male         0.204  4599
+## 2 Female       0.151  4385
+```
+
+``` r
 # Display visualization
 p1
 ```
+
+```
+## `geom_smooth()` using formula = 'y ~ x'
+```
+
+```
+## Warning: Removed 4014 rows containing non-finite outside the scale range
+## (`stat_smooth()`).
+```
+
+```
+## Warning: Removed 4014 rows containing missing values or values outside the scale range
+## (`geom_point()`).
+```
+
+![](final-project-starter-script_files/figure-html/ethnicity_analysis-1.png)<!-- -->
 
 #### Results Interpretation
 
@@ -1482,7 +2410,8 @@ We'll analyze how immunity (using YEXP-1500_1997 - percent chance of getting flu
 
 #### Analysis
 
-```{r immunity_analysis}
+
+``` r
 # Clean and prepare immunity data
 nlsy_immunity <- nlsy %>%
   rename(
@@ -1528,16 +2457,84 @@ p_value <- 2 * (1 - pnorm(abs(z_stat)))
 
 # Print results
 print("Hypothesis Test Results:")
-print("H0: The correlation between immunity and income is equal for both genders")
-print("H1: The correlation between immunity and income differs by gender")
-print(paste("Z-statistic:", round(z_stat, 3)))
-print(paste("p-value:", round(p_value, 4)))
-print("\nCorrelations by Gender:")
-print(correlations)
+```
 
+```
+## [1] "Hypothesis Test Results:"
+```
+
+``` r
+print("H0: The correlation between immunity and income is equal for both genders")
+```
+
+```
+## [1] "H0: The correlation between immunity and income is equal for both genders"
+```
+
+``` r
+print("H1: The correlation between immunity and income differs by gender")
+```
+
+```
+## [1] "H1: The correlation between immunity and income differs by gender"
+```
+
+``` r
+print(paste("Z-statistic:", round(z_stat, 3)))
+```
+
+```
+## [1] "Z-statistic: 2.161"
+```
+
+``` r
+print(paste("p-value:", round(p_value, 4)))
+```
+
+```
+## [1] "p-value: 0.0307"
+```
+
+``` r
+print("\nCorrelations by Gender:")
+```
+
+```
+## [1] "\nCorrelations by Gender:"
+```
+
+``` r
+print(correlations)
+```
+
+```
+## # A tibble: 2 × 3
+##   Gender correlation     n
+##   <fct>        <dbl> <int>
+## 1 Male         0.147  4599
+## 2 Female       0.102  4385
+```
+
+``` r
 # Display visualization
 p1
 ```
+
+```
+## `geom_smooth()` using formula = 'y ~ x'
+```
+
+```
+## Warning: Removed 7093 rows containing non-finite outside the scale range
+## (`stat_smooth()`).
+```
+
+```
+## Warning: Removed 7093 rows containing missing values or values outside the scale range
+## (`geom_point()`).
+```
+
+![](final-project-starter-script_files/figure-html/immunity_analysis-1.png)<!-- -->
 
 #### Results Interpretation
 
@@ -1589,7 +2586,8 @@ We'll analyze how physical/emotional limitations (using PC12-024_1997) relate to
 
 #### Analysis
 
-```{r limitations_analysis}
+
+``` r
 # Clean and prepare limitations data
 nlsy_limitations <- nlsy %>%
   rename(
@@ -1635,16 +2633,84 @@ p_value <- 2 * (1 - pnorm(abs(z_stat)))
 
 # Print results
 print("Hypothesis Test Results:")
-print("H0: The correlation between physical/emotional limitations and income is equal for both genders")
-print("H1: The correlation between physical/emotional limitations and income differs by gender")
-print(paste("Z-statistic:", round(z_stat, 3)))
-print(paste("p-value:", round(p_value, 4)))
-print("\nCorrelations by Gender:")
-print(correlations)
+```
 
+```
+## [1] "Hypothesis Test Results:"
+```
+
+``` r
+print("H0: The correlation between physical/emotional limitations and income is equal for both genders")
+```
+
+```
+## [1] "H0: The correlation between physical/emotional limitations and income is equal for both genders"
+```
+
+``` r
+print("H1: The correlation between physical/emotional limitations and income differs by gender")
+```
+
+```
+## [1] "H1: The correlation between physical/emotional limitations and income differs by gender"
+```
+
+``` r
+print(paste("Z-statistic:", round(z_stat, 3)))
+```
+
+```
+## [1] "Z-statistic: 40.475"
+```
+
+``` r
+print(paste("p-value:", round(p_value, 4)))
+```
+
+```
+## [1] "p-value: 0"
+```
+
+``` r
+print("\nCorrelations by Gender:")
+```
+
+```
+## [1] "\nCorrelations by Gender:"
+```
+
+``` r
+print(correlations)
+```
+
+```
+## # A tibble: 2 × 3
+##   Gender correlation     n
+##   <fct>        <dbl> <int>
+## 1 Male        0.666   4599
+## 2 Female     -0.0515  4385
+```
+
+``` r
 # Display visualization
 p1
 ```
+
+```
+## `geom_smooth()` using formula = 'y ~ x'
+```
+
+```
+## Warning: Removed 8086 rows containing non-finite outside the scale range
+## (`stat_smooth()`).
+```
+
+```
+## Warning: Removed 8086 rows containing missing values or values outside the scale range
+## (`geom_point()`).
+```
+
+![](final-project-starter-script_files/figure-html/limitations_analysis-1.png)<!-- -->
 
 #### Results Interpretation
 
@@ -1703,7 +2769,8 @@ We'll analyze how depression (using PC12-028_1997) relates to income differences
 
 #### Analysis
 
-```{r depression_analysis}
+
+``` r
 # Clean and prepare depression data
 nlsy_depression <- nlsy %>%
   rename(
@@ -1749,16 +2816,84 @@ p_value <- 2 * (1 - pnorm(abs(z_stat)))
 
 # Print results
 print("Hypothesis Test Results:")
-print("H0: The correlation between depression and income is equal for both genders")
-print("H1: The correlation between depression and income differs by gender")
-print(paste("Z-statistic:", round(z_stat, 3)))
-print(paste("p-value:", round(p_value, 4)))
-print("\nCorrelations by Gender:")
-print(correlations)
+```
 
+```
+## [1] "Hypothesis Test Results:"
+```
+
+``` r
+print("H0: The correlation between depression and income is equal for both genders")
+```
+
+```
+## [1] "H0: The correlation between depression and income is equal for both genders"
+```
+
+``` r
+print("H1: The correlation between depression and income differs by gender")
+```
+
+```
+## [1] "H1: The correlation between depression and income differs by gender"
+```
+
+``` r
+print(paste("Z-statistic:", round(z_stat, 3)))
+```
+
+```
+## [1] "Z-statistic: 86.633"
+```
+
+``` r
+print(paste("p-value:", round(p_value, 4)))
+```
+
+```
+## [1] "p-value: 0"
+```
+
+``` r
+print("\nCorrelations by Gender:")
+```
+
+```
+## [1] "\nCorrelations by Gender:"
+```
+
+``` r
+print(correlations)
+```
+
+```
+## # A tibble: 2 × 3
+##   Gender correlation     n
+##   <fct>        <dbl> <int>
+## 1 Male       -0.0964  4599
+## 2 Female     -0.958   4385
+```
+
+``` r
 # Display visualization
 p1
 ```
+
+```
+## `geom_smooth()` using formula = 'y ~ x'
+```
+
+```
+## Warning: Removed 7992 rows containing non-finite outside the scale range
+## (`stat_smooth()`).
+```
+
+```
+## Warning: Removed 7992 rows containing missing values or values outside the scale range
+## (`geom_point()`).
+```
+
+![](final-project-starter-script_files/figure-html/depression_analysis-1.png)<!-- -->
 
 #### Results Interpretation
 
@@ -1819,7 +2954,8 @@ We'll analyze how organizational skills (using YSAQ-282Q_2002) relate to income 
 
 #### Analysis
 
-```{r organization_analysis}
+
+``` r
 # Clean and prepare organizational skills data
 nlsy_organization <- nlsy %>%
   rename(
@@ -1865,16 +3001,84 @@ p_value <- 2 * (1 - pnorm(abs(z_stat)))
 
 # Print results
 print("Hypothesis Test Results:")
-print("H0: The correlation between organizational skills and income is equal for both genders")
-print("H1: The correlation between organizational skills and income differs by gender")
-print(paste("Z-statistic:", round(z_stat, 3)))
-print(paste("p-value:", round(p_value, 4)))
-print("\nCorrelations by Gender:")
-print(correlations)
+```
 
+```
+## [1] "Hypothesis Test Results:"
+```
+
+``` r
+print("H0: The correlation between organizational skills and income is equal for both genders")
+```
+
+```
+## [1] "H0: The correlation between organizational skills and income is equal for both genders"
+```
+
+``` r
+print("H1: The correlation between organizational skills and income differs by gender")
+```
+
+```
+## [1] "H1: The correlation between organizational skills and income differs by gender"
+```
+
+``` r
+print(paste("Z-statistic:", round(z_stat, 3)))
+```
+
+```
+## [1] "Z-statistic: 0.311"
+```
+
+``` r
+print(paste("p-value:", round(p_value, 4)))
+```
+
+```
+## [1] "p-value: 0.7557"
+```
+
+``` r
+print("\nCorrelations by Gender:")
+```
+
+```
+## [1] "\nCorrelations by Gender:"
+```
+
+``` r
+print(correlations)
+```
+
+```
+## # A tibble: 2 × 3
+##   Gender correlation     n
+##   <fct>        <dbl> <int>
+## 1 Male        0.0494  4599
+## 2 Female      0.0428  4385
+```
+
+``` r
 # Display visualization
 p1
 ```
+
+```
+## `geom_smooth()` using formula = 'y ~ x'
+```
+
+```
+## Warning: Removed 6097 rows containing non-finite outside the scale range
+## (`stat_smooth()`).
+```
+
+```
+## Warning: Removed 6097 rows containing missing values or values outside the scale range
+## (`geom_point()`).
+```
+
+![](final-project-starter-script_files/figure-html/organization_analysis-1.png)<!-- -->
 
 #### Results Interpretation
 
@@ -1975,7 +3179,8 @@ The following factors showed weak or insignificant relationships and should be e
 - Drug Use
 - Organizational Skills
 
-```{r regression_model}
+
+``` r
 # Create regression model for income prediction
 # First, prepare the data by selecting variables and handling missing values more carefully
 
@@ -2041,7 +3246,13 @@ model_data <- model_data[!is.na(model_data$Income), ]
 
 # Print dimensions of the dataset
 cat("Dataset dimensions after cleaning:", dim(model_data), "\n")
+```
 
+```
+## Dataset dimensions after cleaning: 8984 22
+```
+
+``` r
 # Split data into training and testing sets
 set.seed(123)  # for reproducibility
 train_index <- sample(1:nrow(model_data), 0.7 * nrow(model_data))
@@ -2053,7 +3264,50 @@ income_model <- lm(Income ~ ., data = train_data)
 
 # Print model summary
 summary(income_model)
+```
 
+```
+## 
+## Call:
+## lm(formula = Income ~ ., data = train_data)
+## 
+## Residuals:
+##    Min     1Q Median     3Q    Max 
+## -76671 -14227  -2180   8694 202537 
+## 
+## Coefficients:
+##                         Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)             44326.85     567.01  78.177  < 2e-16 ***
+## gender_binary           11432.02     774.42  14.762  < 2e-16 ***
+## depression_c             6948.13   49607.06   0.140 0.888614    
+## physical_limitations_c     91.95    1649.24   0.056 0.955539    
+## num_children_c          -1425.76     578.55  -2.464 0.013753 *  
+## education_level_c        6259.34     443.34  14.119  < 2e-16 ***
+## marital_status_c         -484.41     634.83  -0.763 0.445458    
+## age_c                    -217.46     373.24  -0.583 0.560158    
+## parents_education_c       261.34     204.27   1.279 0.200807    
+## criminal_history_c        271.82    1544.01   0.176 0.860263    
+## work_experience_c         -28.51      48.72  -0.585 0.558487    
+## race_c                    827.39     418.38   1.978 0.048019 *  
+## gender_depression      -10031.57   49634.21  -0.202 0.839837    
+## gender_physical          8486.28   22611.30   0.375 0.707442    
+## gender_children          3156.27     846.52   3.729 0.000194 ***
+## gender_education         2879.21     635.34   4.532 5.96e-06 ***
+## gender_marital           4201.08     946.31   4.439 9.17e-06 ***
+## gender_age               1411.03     522.56   2.700 0.006948 ** 
+## gender_parent_edu        -135.58     241.66  -0.561 0.574784    
+## gender_criminal           -18.36    1656.55  -0.011 0.991158    
+## gender_work_exp            86.33      63.80   1.353 0.176037    
+## gender_race              1291.89     584.27   2.211 0.027063 *  
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 28790 on 6266 degrees of freedom
+## Multiple R-squared:  0.1564,	Adjusted R-squared:  0.1536 
+## F-statistic: 55.32 on 21 and 6266 DF,  p-value: < 2.2e-16
+```
+
+``` r
 # Calculate R-squared for training data
 train_r2 <- summary(income_model)$r.squared
 
@@ -2064,9 +3318,30 @@ test_r2 <- 1 - sum((test_data$Income - test_predictions)^2) /
 
 # Print model performance metrics
 cat("\nModel Performance:\n")
-cat("Training R-squared:", round(train_r2, 4), "\n")
-cat("Testing R-squared:", round(test_r2, 4), "\n")
+```
 
+```
+## 
+## Model Performance:
+```
+
+``` r
+cat("Training R-squared:", round(train_r2, 4), "\n")
+```
+
+```
+## Training R-squared: 0.1564
+```
+
+``` r
+cat("Testing R-squared:", round(test_r2, 4), "\n")
+```
+
+```
+## Testing R-squared: 0.1252
+```
+
+``` r
 # Create prediction data frame with centered variables
 predictions_by_gender <- data.frame(
   gender_binary = c(0, 1),
@@ -2102,11 +3377,46 @@ gender_gap <- predicted_incomes[2] - predicted_incomes[1]
 gender_gap_percent <- (gender_gap / predicted_incomes[1]) * 100
 
 cat("\nPredicted Gender Pay Gap:\n")
-cat("Female average income: $", round(predicted_incomes[1], 2), "\n")
-cat("Male average income: $", round(predicted_incomes[2], 2), "\n")
-cat("Absolute gap: $", round(gender_gap, 2), "\n")
-cat("Percentage gap:", round(gender_gap_percent, 1), "%\n")
+```
 
+```
+## 
+## Predicted Gender Pay Gap:
+```
+
+``` r
+cat("Female average income: $", round(predicted_incomes[1], 2), "\n")
+```
+
+```
+## Female average income: $ 44326.85
+```
+
+``` r
+cat("Male average income: $", round(predicted_incomes[2], 2), "\n")
+```
+
+```
+## Male average income: $ 55758.87
+```
+
+``` r
+cat("Absolute gap: $", round(gender_gap, 2), "\n")
+```
+
+```
+## Absolute gap: $ 11432.02
+```
+
+``` r
+cat("Percentage gap:", round(gender_gap_percent, 1), "%\n")
+```
+
+```
+## Percentage gap: 25.8 %
+```
+
+``` r
 # Create more descriptive labels for features
 feature_labels <- c(
     "gender_binary" = "Gender (Female = 0, Male = 1)",
@@ -2163,7 +3473,11 @@ ggplot(feature_importance, aes(x = reorder(feature_label, importance), y = impor
         plot.subtitle = element_text(size = 10, color = "gray50"),
         plot.caption = element_text(size = 8, color = "gray50")
     )
+```
 
+![](final-project-starter-script_files/figure-html/regression_model-1.png)<!-- -->
+
+``` r
 # Create comprehensive feature importance analysis with combined effects
 feature_analysis <- data.frame(
     feature = names(coef(income_model))[-1],  # exclude intercept
@@ -2289,7 +3603,11 @@ p2 <- ggplot(feature_analysis,
 
 # Arrange plots side by side
 grid.arrange(p1, p2, ncol = 2, widths = c(1.2, 1))
+```
 
+![](final-project-starter-script_files/figure-html/regression_model-2.png)<!-- -->
+
+``` r
 # Print detailed summary table with cleaned feature names
 summary_table <- feature_analysis %>%
     arrange(feature_type, desc(effect_size)) %>%
@@ -2302,9 +3620,46 @@ summary_table <- feature_analysis %>%
     )
 
 print("Detailed Factor Analysis:")
+```
+
+```
+## [1] "Detailed Factor Analysis:"
+```
+
+``` r
 print(kable(summary_table, 
            col.names = c("Factor", "Effect Type", "Coefficient", "Std. Error", "t-value", "p-value", "Significance"),
            caption = "Statistical Summary of Income Factors"))
+```
+
+```
+## 
+## 
+## Table: Statistical Summary of Income Factors
+## 
+## |                       |Factor                        |Effect Type         | Coefficient| Std. Error| t-value|p-value  |Significance |
+## |:----------------------|:-----------------------------|:-------------------|-----------:|----------:|-------:|:--------|:------------|
+## |gender_binary          |Gender                        |Interaction Effects |    11432.02|     774.42|   14.76|< 2e-16  |***          |
+## |gender_depression      |Depression × Gender           |Interaction Effects |   -10031.57|   49634.21|   -0.20|0.839837 |ns           |
+## |gender_physical        |Physical Limitations × Gender |Interaction Effects |     8486.28|   22611.30|    0.38|0.707442 |ns           |
+## |gender_marital         |Marital Status × Gender       |Interaction Effects |     4201.08|     946.31|    4.44|9.17e-06 |***          |
+## |gender_children        |Children × Gender             |Interaction Effects |     3156.27|     846.52|    3.73|0.000194 |***          |
+## |gender_education       |Education × Gender            |Interaction Effects |     2879.21|     635.34|    4.53|5.96e-06 |***          |
+## |gender_age             |Age × Gender                  |Interaction Effects |     1411.03|     522.56|    2.70|0.006948 |**           |
+## |gender_race            |Race/Ethnicity × Gender       |Interaction Effects |     1291.89|     584.27|    2.21|0.027063 |*            |
+## |gender_parent_edu      |Parents' Education × Gender   |Interaction Effects |     -135.58|     241.66|   -0.56|0.574784 |ns           |
+## |gender_work_exp        |Work Experience × Gender      |Interaction Effects |       86.33|      63.80|    1.35|0.176037 |ns           |
+## |gender_criminal        |Criminal History × Gender     |Interaction Effects |      -18.36|    1656.55|   -0.01|0.991158 |ns           |
+## |depression_c           |Depression                    |Main Effects        |     6948.13|   49607.06|    0.14|0.888614 |ns           |
+## |education_level_c      |Education                     |Main Effects        |     6259.34|     443.34|   14.12|< 2e-16  |***          |
+## |num_children_c         |Number of Children            |Main Effects        |    -1425.76|     578.55|   -2.46|0.013753 |*            |
+## |race_c                 |Race/Ethnicity                |Main Effects        |      827.39|     418.38|    1.98|0.048019 |*            |
+## |marital_status_c       |Marital Status                |Main Effects        |     -484.41|     634.83|   -0.76|0.445458 |ns           |
+## |criminal_history_c     |Criminal History              |Main Effects        |      271.82|    1544.01|    0.18|0.860263 |ns           |
+## |parents_education_c    |Parents' Education            |Main Effects        |      261.34|     204.27|    1.28|0.200807 |ns           |
+## |age_c                  |Age                           |Main Effects        |     -217.46|     373.24|   -0.58|0.560158 |ns           |
+## |physical_limitations_c |Physical Limitations          |Main Effects        |       91.95|    1649.24|    0.06|0.955539 |ns           |
+## |work_experience_c      |Work Experience               |Main Effects        |      -28.51|      48.72|   -0.59|0.558487 |ns           |
 ```
 
 ### Key Findings from the Regression Analysis
@@ -2363,7 +3718,6 @@ print(kable(summary_table,
 
 #### 5. Non-Significant Factors
 Several factors showed no significant direct effect but had significant gender interactions:
-
 - Depression
 - Physical limitations
 - Work experience
